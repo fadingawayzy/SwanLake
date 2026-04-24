@@ -420,6 +420,17 @@ python moc.py
 
 ---
 
+## Как выглядит Obsidian в общем
+
+<img width="1062" height="539" alt="Вставленное изображение (7)" src="https://github.com/user-attachments/assets/2f7ce498-3157-4d19-a0dc-8302ba2f499b" />
+<img width="1244" height="955" alt="Вставленное изображение (6)" src="https://github.com/user-attachments/assets/447cb2a5-14d8-43b1-809a-68ea8ed6c777" />
+<img width="1246" height="688" alt="Вставленное изображение (5)" src="https://github.com/user-attachments/assets/6e2446dd-7853-44ec-ac21-9998725f54e4" />
+<img width="1259" height="989" alt="Вставленное изображение (4)" src="https://github.com/user-attachments/assets/3208223d-bab3-4b2f-9e36-ca314cd7a77b" />
+<img width="1056" height="950" alt="Вставленное изображение (3)" src="https://github.com/user-attachments/assets/1ff86522-8076-4197-96c1-94e581c6848b" />
+<img width="1053" height="909" alt="Вставленное изображение (2)" src="https://github.com/user-attachments/assets/43e9ef75-eda6-4125-a015-0bda04c53ce9" />
+<img width="1280" height="668" alt="Вставленное изображение" src="https://github.com/user-attachments/assets/8d2686d4-4d6e-4467-942a-bcc428abd665" />
+
+
 ## Лицензия / атрибуция
 
 Задачи ФИПИ — публичны (открытый банк ЕГЭ).
