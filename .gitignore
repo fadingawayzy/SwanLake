@@ -1,0 +1,24 @@
+# Среда и кэш
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Секреты
+.env
+
+# База данных
+ege.db
+
+# Локальные настройки Obsidian, которые не нужны другим
+vault/.obsidian/workspace.json
+vault/.obsidian/graph.json
+vault/.obsidian/app.json
+
+
+# vault/math_profile/*
+# vault/physics/*
+# vault/informatics/*
+# vault/russian/*
+# !vault/**/_moc/
+# !vault/**/_templates/
