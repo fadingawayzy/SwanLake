@@ -5,6 +5,7 @@ Scrapes 4 subjects: math profile, physics, informatics, russian.
 Output: JSON files per subject in ./data/
 """
 
+import os
 import requests
 import json
 import time
@@ -14,7 +15,10 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from mathml_to_latex import extract_latex_from_block
 
-warnings.filterwarnings("ignore")
+INSECURE = os.environ.get("EGE_SCRAPER_INSECURE") == "1"
+if INSECURE:
+    warnings.filterwarnings("ignore")
+    print("WARN: SSL verification disabled via EGE_SCRAPER_INSECURE=1")
 
 BASE = "https://ege.fipi.ru/bank"
 
@@ -31,7 +35,7 @@ OUT.mkdir(exist_ok=True)
 
 def make_session(proj_id: str) -> requests.Session:
     s = requests.Session()
-    s.verify = False
+    s.verify = not INSECURE
     s.headers.update({
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
         "Accept": "text/html,application/xhtml+xml",
