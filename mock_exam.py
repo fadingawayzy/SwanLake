@@ -23,6 +23,7 @@ from generator import (
     build_prompt, parse_response, get_client, get_model,
     get_subject_key, load_framework
 )
+from llm import complete
 
 load_dotenv()
 
@@ -76,12 +77,8 @@ def harden(task: dict, framework: dict, subject: str, client, model: str) -> dic
             break
 
     prompt = build_prompt(task, strategy_name, strategy_desc, 3, framework)
-    response = client.chat.completions.create(
-        model=model,
-        max_tokens=16384,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return parse_response(response.choices[0].message.content or "")
+    text = complete(client, model, prompt, max_tokens=16384)
+    return parse_response(text)
 
 
 def render_exam(subject: str, items: list[dict], hard: bool) -> str:
@@ -188,7 +185,9 @@ def main():
                 print(f"    API error: {e} — falling back to bank task")
                 items.append(src)
         else:
-            items.append({**src, "_answer": src.get("answer", "")})
+            fmt = src.get("answer_format", "").strip()
+            placeholder = f"(решить самостоятельно — формат: {fmt})" if fmt else "(решить самостоятельно)"
+            items.append({**src, "_answer": placeholder})
 
     out_dir = Path(args.out) / args.subject
     out_dir.mkdir(parents=True, exist_ok=True)
