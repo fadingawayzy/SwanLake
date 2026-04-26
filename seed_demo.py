@@ -38,7 +38,6 @@ def top_prefix(kes: str) -> str:
 
 
 def demo_solution(task_text: str, kes: str) -> dict:
-    """Build a plausible-looking solution block without LLM. Marks as demo."""
     return {
         "task": task_text,
         "solution": (
@@ -48,7 +47,7 @@ def demo_solution(task_text: str, kes: str) -> dict:
             f"Шаг 3. Решение подкласса КЭС {kes} с учётом выбранной стратегии.\n\n"
             "Шаг 4. Проверка и запись ответа."
         ),
-        "answer": f"ДЕМО_{random.randint(100,999)}",
+        "answer": "*(демо — ответ не вычислен; запустите batch_generate.py)*",
         "difficulty": random.choice([2, 3, 3, 3, 4]),
         "technique": "",
     }
