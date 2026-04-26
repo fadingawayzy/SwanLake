@@ -16,9 +16,14 @@ vault/.obsidian/graph.json
 vault/.obsidian/app.json
 
 
-# vault/math_profile/*
-# vault/physics/*
-# vault/informatics/*
-# vault/russian/*
-# !vault/**/_moc/
-# !vault/**/_templates/
+# Сгенерированные задачи vault — артефакты, не источник
+vault/math_profile/
+vault/physics/
+vault/informatics/
+vault/russian/
+!vault/**/_moc/
+!vault/**/_templates/
+
+# Локальные планы / временные файлы
+plan.py
+*.tmp
