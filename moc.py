@@ -40,6 +40,12 @@ def top_prefix(kes: str) -> str:
     return ".".join(parts[:2]) if len(parts) >= 2 else k
 
 
+def safe_link(s: str) -> str:
+    """Replace path-illegal chars in topic to keep it usable as filename + wikilink target.
+    U+2215 (∕) renders like ASCII '/' but is not a path separator."""
+    return s.replace("/", "∕").replace("\\", "∖").replace(":", "꞉")
+
+
 def kes_match(code: str, fw_code: str) -> bool:
     a = code.split(".")
     b = fw_code.split(".")
@@ -166,7 +172,8 @@ def build_subject(subj: str):
     for code in sorted(codes.keys()):
         topic, _ = lookup_fw(mods, code)
         topic = topic or "без темы"
-        lines.append(f"- [[КЭС {code} {topic}|{code} · {topic}]] ({codes[code]} задач в банке)")
+        slug = safe_link(topic)
+        lines.append(f"- [[КЭС {code} {slug}|{code} · {topic}]] ({codes[code]} задач в банке)")
 
     lines += [
         "",
@@ -194,6 +201,7 @@ def build_subject(subj: str):
 
 
 def build_kes_moc(subj: str, code: str, topic: str, levels: list):
+    slug = safe_link(topic)
     lines = [
         "---",
         f'aliases: ["КЭС {code}", "{topic}", "{code} {topic}"]',
@@ -235,7 +243,7 @@ def build_kes_moc(subj: str, code: str, topic: str, levels: list):
         "> - ",
         "",
     ]
-    write(MOC_ROOT / "kes" / f"КЭС {code} {topic}.md", "\n".join(lines))
+    write(MOC_ROOT / "kes" / f"КЭС {code} {slug}.md", "\n".join(lines))
 
 
 def build_technique(name: str, desc: str):

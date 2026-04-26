@@ -98,6 +98,10 @@ def kes_match(code: str, fw_code: str) -> bool:
     return len(b) <= len(a) and a[:len(b)] == b
 
 
+def safe_link(s: str) -> str:
+    return s.replace("/", "∕").replace("\\", "∖").replace(":", "꞉")
+
+
 def get_kes_strategies(framework: dict, subject_key: str, kes_code: str) -> list[dict]:
     subject = framework["subjects"].get(subject_key, {})
     mods = subject.get("kes_modifications", {})
@@ -278,7 +282,7 @@ def to_obsidian(task: dict, source: dict, subject: str, strategy: str,
         "",
         f"> [!abstract]- Метаданные",
         f"> - **Предмет:** [[{subj_ru}]]",
-        f"> - **КЭС:** [[КЭС {kes_short} {topic}|{kes_short} · {topic}]]",
+        f"> - **КЭС:** [[КЭС {kes_short} {safe_link(topic)}|{kes_short} · {topic}]]",
         f"> - **Приём усложнения:** [[Приём · {strategy}]]",
         f"> - **Сложность:** {parsed.get('difficulty', 0)}/4",
         f"> - **Оригинал:** `{source_id}` · [ФИПИ банк](https://ege.fipi.ru/bank/questions.php?proj=)",
@@ -311,7 +315,7 @@ def to_obsidian(task: dict, source: dict, subject: str, strategy: str,
         "",
         "## Связи",
         "",
-        f"- Тема: [[КЭС {kes_short} {topic}]]",
+        f"- Тема: [[КЭС {kes_short} {safe_link(topic)}|КЭС {kes_short} {topic}]]",
         f"- Приём: [[Приём · {strategy}]]",
         f"- Предмет: [[{subj_ru}]]",
         f"- Все задачи КЭС {kes_short}: тег #ege/{subject}/{kes_short.replace('.', '-')}",
