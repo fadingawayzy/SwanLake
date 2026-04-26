@@ -22,16 +22,42 @@ from db import connect
 from datetime import datetime
 
 
+def _strip_callout(block: str) -> str:
+    out = []
+    for line in block.splitlines():
+        if line.startswith("> "):
+            out.append(line[2:])
+        elif line.startswith(">"):
+            out.append(line[1:])
+        else:
+            out.append(line)
+    return "\n".join(out).strip()
+
+
 def parse_md(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     out = {"task": "", "solution": "", "answer": ""}
 
-    m = re.search(r"## Задание\s*\n(.*?)## Решение", text, re.DOTALL)
-    if m: out["task"] = m.group(1).strip()
-    m = re.search(r"## Решение\s*\n(.*?)\*\*Ответ:\*\*", text, re.DOTALL)
-    if m: out["solution"] = m.group(1).strip()
-    m = re.search(r"\*\*Ответ:\*\*\s*(.+?)\n", text)
-    if m: out["answer"] = m.group(1).strip()
+    m = re.search(r"\[!question\][+\-]?\s*Условие\s*\n(.*?)(?=\n##|\n>\s*\[!|\Z)", text, re.DOTALL)
+    if m:
+        out["task"] = _strip_callout(m.group(1))
+    else:
+        m = re.search(r"## Задание\s*\n(.*?)## Решение", text, re.DOTALL)
+        if m: out["task"] = _strip_callout(m.group(1))
+
+    m = re.search(r"\[!note\][+\-]?\s*Разворот решения[^\n]*\n(.*?)(?=\n>\s*\[!success\]|\Z)", text, re.DOTALL)
+    if m:
+        out["solution"] = _strip_callout(m.group(1))
+    else:
+        m = re.search(r"## Решение\s*\n(.*?)(?=\*\*Ответ:\*\*|>\s*\[!success\]|\Z)", text, re.DOTALL)
+        if m: out["solution"] = _strip_callout(m.group(1))
+
+    m = re.search(r"\[!success\]\s*Ответ\s*\n((?:>\s*.*\n?)+)", text)
+    if m:
+        out["answer"] = _strip_callout(m.group(1))
+    else:
+        m = re.search(r"\*\*Ответ:\*\*\s*(.+?)\n", text)
+        if m: out["answer"] = m.group(1).strip()
     return out
 
 

@@ -25,6 +25,19 @@ from db import connect
 load_dotenv()
 
 
+def _strip_callout(block: str) -> str:
+    """Drop leading '> ' / '>' from each line of a callout body."""
+    out = []
+    for line in block.splitlines():
+        if line.startswith("> "):
+            out.append(line[2:])
+        elif line.startswith(">"):
+            out.append(line[1:])
+        else:
+            out.append(line)
+    return "\n".join(out).strip()
+
+
 def parse_md(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     result = {"task": "", "answer": "", "subject": "", "kes": ""}
@@ -36,13 +49,21 @@ def parse_md(path: Path) -> dict:
                 k, v = line.split(":", 1)
                 result[k.strip()] = v.strip().strip('"')
 
-    m = re.search(r"## Задание\s*\n(.*?)## Решение", text, re.DOTALL)
+    m = re.search(r"\[!question\][+\-]?\s*Условие\s*\n(.*?)(?=\n##|\n>\s*\[!|\Z)", text, re.DOTALL)
     if m:
-        result["task"] = m.group(1).strip()
+        result["task"] = _strip_callout(m.group(1))
+    else:
+        m = re.search(r"## Задание\s*\n(.*?)## Решение", text, re.DOTALL)
+        if m:
+            result["task"] = _strip_callout(m.group(1))
 
-    m = re.search(r"\*\*Ответ:\*\*\s*(.+?)\n", text)
+    m = re.search(r"\[!success\]\s*Ответ\s*\n((?:>\s*.*\n?)+)", text)
     if m:
-        result["answer"] = m.group(1).strip()
+        result["answer"] = _strip_callout(m.group(1))
+    else:
+        m = re.search(r"\*\*Ответ:\*\*\s*(.+?)\n", text)
+        if m:
+            result["answer"] = m.group(1).strip()
 
     return result
 
