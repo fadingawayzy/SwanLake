@@ -8,7 +8,7 @@ Usage:
     python generator.py --subject physics --random --n 5 --out vault/
 
 Requires OPENROUTER_API_KEY in env or .env file.
-Model: set OPENROUTER_MODEL (default: anthropic/claude-sonnet-4-6).
+Model: set OPENROUTER_MODEL (default: deepseek/deepseek-r1).
 """
 
 import argparse

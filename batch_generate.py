@@ -8,16 +8,16 @@ Each subject × КЭС × strategy combination produces N Obsidian Markdown file
 in vault/<subject>/ ready to open in Obsidian.
 
 Requires OPENROUTER_API_KEY in env or .env file.
-Model: set OPENROUTER_MODEL (default: anthropic/claude-sonnet-4-6).
+Model: set OPENROUTER_MODEL (default: deepseek/deepseek-r1).
 """
 
 import argparse
 import importlib.util
 import json
 import random
-import sys
 from datetime import datetime
 from pathlib import Path
+
 
 from dotenv import load_dotenv
 
@@ -32,9 +32,16 @@ load_dotenv()
 
 
 def load_plan_from_file(path: Path) -> list[tuple]:
-    spec = importlib.util.spec_from_file_location("plan_mod", path)
+    p = path.resolve()
+    if not p.is_file() or p.suffix != ".py":
+        raise SystemExit(f"ERROR: --plan must be an existing .py file, got {path}")
+    spec = importlib.util.spec_from_file_location("plan_mod", p)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"ERROR: cannot load plan from {p}")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    if not hasattr(mod, "PLAN"):
+        raise SystemExit(f"ERROR: {p} does not define PLAN")
     return mod.PLAN
 
 # ── Daily practice plan ──────────────────────────────────────────────────────
