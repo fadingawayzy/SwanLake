@@ -60,8 +60,11 @@ demo_variants/               ← вывод mock_exam.py
 ```bash
 python -m venv venv
 source venv/bin/activate   # или fish: source venv/bin/activate.fish
-pip install openai python-dotenv requests beautifulsoup4
+pip install -r requirements.txt
 ```
+
+В `requirements.txt`: `openai`, `python-dotenv`, `requests`, `beautifulsoup4`,
+`lxml` (парсер HTML для scraper.py), `streamlit` (для `dashboard.py`).
 
 ### 2. API-ключ OpenRouter
 
@@ -151,7 +154,7 @@ python moc.py    # пересобрать индексы Obsidian
 | `mock_exam.py` | Сборка пробного варианта ЕГЭ (`--hard` для LLM-усложнения) |
 | `moc.py` | Пересборка Obsidian-MOC (после изменений каркаса/данных) |
 | `seed_demo.py` | Заполнение демо-данными для просмотра функционала |
-| `dashboard.py` | Терминальный дашборд (по желанию) |
+| `dashboard.py` | Веб-дашборд на Streamlit: `streamlit run dashboard.py` (по желанию) |
 | `db.py` / `llm.py` | Внутренние модули (не запускаются напрямую) |
 
 ---
@@ -395,6 +398,8 @@ python mock_exam.py --subject physics --hard --seed 42
 - **2027 кодификатор** ещё не опубликован (на момент апреля 2026 актуален 2026).
   При выходе — скачать новый zip с `https://doc.fipi.ru/ege/.../2027/` и
   пересобрать каркас по `coverage.py`.
+- **`dashboard.py`:** Streamlit-панель, запуск `streamlit run dashboard.py`.
+  Без полноценной авторизации — поднимать только локально.
 
 ---
 
@@ -410,8 +415,10 @@ python srs.py queue --limit 15
 # Сгенерировать одну конкретную задачу
 python generator.py --subject math_profile --kes 2.10 --strategy все_значения --n 1
 
-# Скачать свежие задачи ФИПИ
-python scraper.py --subject physics --pages 50
+# Скачать свежие задачи ФИПИ (все 4 предмета сразу; пропускает уже скачанные)
+python scraper.py
+# При проблемах с SSL у ФИПИ можно временно отключить проверку сертификата:
+# EGE_SCRAPER_INSECURE=1 python scraper.py
 
 # Очистить vault от старых задач (оставить только MOC + шаблоны)
 find vault -name '*.md' -not -path '*/_moc/*' -not -path '*/_templates/*' -delete
