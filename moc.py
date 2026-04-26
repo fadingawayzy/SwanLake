@@ -40,6 +40,24 @@ def top_prefix(kes: str) -> str:
     return ".".join(parts[:2]) if len(parts) >= 2 else k
 
 
+def kes_match(code: str, fw_code: str) -> bool:
+    a = code.split(".")
+    b = fw_code.split(".")
+    return len(b) <= len(a) and a[:len(b)] == b
+
+
+def lookup_fw(mods: dict, code: str) -> tuple[str, list]:
+    if code in mods:
+        return mods[code].get("topic", ""), mods[code].get("levels", [])
+    best_key = ""
+    for fw_code in mods:
+        if kes_match(code, fw_code) and len(fw_code.split(".")) > len(best_key.split(".")):
+            best_key = fw_code
+    if best_key:
+        return mods[best_key].get("topic", ""), mods[best_key].get("levels", [])
+    return "", []
+
+
 def write(path: Path, content: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -146,11 +164,7 @@ def build_subject(subj: str):
         "",
     ]
     for code in sorted(codes.keys()):
-        topic = ""
-        for fw_code, data in mods.items():
-            if code.startswith(fw_code) or fw_code.startswith(code):
-                topic = data.get("topic", "")
-                break
+        topic, _ = lookup_fw(mods, code)
         topic = topic or "без темы"
         lines.append(f"- [[КЭС {code} {topic}|{code} · {topic}]] ({codes[code]} задач в банке)")
 
@@ -283,13 +297,7 @@ def main():
             codes_in_data = set()
 
         for code in codes_in_data:
-            topic = ""
-            levels = []
-            for fw_code, data in mods.items():
-                if code.startswith(fw_code) or fw_code.startswith(code):
-                    topic = data.get("topic", "")
-                    levels = data.get("levels", [])
-                    break
+            topic, levels = lookup_fw(mods, code)
             topic = topic or "без темы"
             build_kes_moc(subj, code, topic, levels)
 

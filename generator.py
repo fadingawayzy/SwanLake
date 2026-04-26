@@ -92,6 +92,12 @@ def find_tasks_by_kes(tasks: list[dict], kes_prefix: str) -> list[dict]:
     return [t for t in tasks if t.get("kes", "").startswith(kes_prefix)]
 
 
+def kes_match(code: str, fw_code: str) -> bool:
+    a = code.split(".")
+    b = fw_code.split(".")
+    return len(b) <= len(a) and a[:len(b)] == b
+
+
 def get_kes_strategies(framework: dict, subject_key: str, kes_code: str) -> list[dict]:
     subject = framework["subjects"].get(subject_key, {})
     mods = subject.get("kes_modifications", {})
@@ -99,11 +105,11 @@ def get_kes_strategies(framework: dict, subject_key: str, kes_code: str) -> list
     if kes_code in mods:
         return mods[kes_code]["levels"]
 
+    best_key = ""
     for key in mods:
-        if kes_code.startswith(key):
-            return mods[key]["levels"]
-
-    return []
+        if kes_match(kes_code, key) and len(key.split(".")) > len(best_key.split(".")):
+            best_key = key
+    return mods[best_key]["levels"] if best_key else []
 
 
 def build_prompt(task: dict, strategy_name: str, strategy_desc: str,
@@ -225,10 +231,15 @@ def to_obsidian(task: dict, source: dict, subject: str, strategy: str,
     subj_mods = framework["subjects"].get(subject_key, {}).get("kes_modifications", {})
     kes_short = top_kes_prefix(kes_full)
     topic = ""
-    for k, v in subj_mods.items():
-        if kes_full.startswith(k):
-            topic = v["topic"]
-            break
+    if kes_short in subj_mods:
+        topic = subj_mods[kes_short].get("topic", "")
+    else:
+        best_key = ""
+        for k in subj_mods:
+            if kes_match(kes_short, k) and len(k.split(".")) > len(best_key.split(".")):
+                best_key = k
+        if best_key:
+            topic = subj_mods[best_key].get("topic", "")
     if not topic:
         topic = kes_full.split(" ", 1)[1] if " " in kes_full else "без темы"
 
