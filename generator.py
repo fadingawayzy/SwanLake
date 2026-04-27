@@ -210,27 +210,21 @@ def parse_response(text: str) -> dict:
         "technique": "",
         "raw": text,
     }
-
-    m = re.search(r"ЗАДАНИЕ:\s*\n(.*?)(?=РЕШЕНИЕ:|$)", text, re.DOTALL)
+    m = re.search(r"ЗАДАНИЕ:\s*(.*?)(?=РЕШЕНИЕ:|$)", text, re.DOTALL)
     if m:
         result["task"] = m.group(1).strip()
-
-    m = re.search(r"РЕШЕНИЕ:\s*\n(.*?)(?=ОТВЕТ:|$)", text, re.DOTALL)
+    m = re.search(r"РЕШЕНИЕ:\s*(.*?)(?=ОТВЕТ:|$)", text, re.DOTALL)
     if m:
         result["solution"] = m.group(1).strip()
-
     m = re.search(r"ОТВЕТ:\s*(.+?)(?=\n|$)", text)
     if m:
         result["answer"] = m.group(1).strip()
-
-    m = re.search(r"СЛОЖНОСТЬ:\s*(\d)", text)
+    m = re.search(r"СЛОЖНОСТЬ:\s*(\d+)", text)
     if m:
         result["difficulty"] = int(m.group(1))
-
     m = re.search(r"ПРИЁМ:\s*(.+?)(?=\n|$)", text)
     if m:
         result["technique"] = m.group(1).strip()
-
     return result
 # === END_PARSE_LLM_RESPONSE ===
 
