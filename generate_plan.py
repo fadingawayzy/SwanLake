@@ -22,12 +22,15 @@ SUBJECTS = ["math_profile", "physics", "russian", "informatics"]
 GLOBAL_FALLBACK = ["add_parameter", "increase_dimensions", "add_constraint", "chain_problems", "change_question"]
 
 
+# === START_TOP_PREFIX_PLAN ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_PLAN ===
 
 
+# === START_PICK_PLAN_STRATEGY ===
 def pick_strategy(framework: dict, subject: str, kes: str) -> str:
     subj = framework["subjects"].get(subject, {})
     mods = subj.get("kes_modifications", {})
@@ -38,8 +41,10 @@ def pick_strategy(framework: dict, subject: str, kes: str) -> str:
                 return levels[0]["name"]
     idx = abs(hash(f"{subject}:{kes}")) % len(GLOBAL_FALLBACK)
     return GLOBAL_FALLBACK[idx]
+# === END_PICK_PLAN_STRATEGY ===
 
 
+# === START_COMPUTE_WEAKNESS_WEIGHTS ===
 def weakness_weights() -> dict:
     if not DB_PATH.exists():
         return {}
@@ -56,8 +61,10 @@ def weakness_weights() -> dict:
         if total > 0:
             w[(subj, kes)] = fails / total
     return w
+# === END_COMPUTE_WEAKNESS_WEIGHTS ===
 
 
+# === START_RUN_PLAN_GENERATOR_CLI ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--weights", choices=["none", "tracker"], default="none")
@@ -93,6 +100,7 @@ def main():
         print(f'    ("{subj}", "{kes}", "{strat}", {diff}, {n}),')
     print("]")
     print(f"\n# Total: {sum(e[4] for e in plan)} tasks across {len(plan)} КЭС codes", )
+# === END_RUN_PLAN_GENERATOR_CLI ===
 
 
 if __name__ == "__main__":

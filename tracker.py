@@ -21,6 +21,7 @@ from pathlib import Path
 from db import connect as conn, DB_PATH as DB
 
 
+# === START_PARSE_TRACKER_FRONTMATTER ===
 def parse_frontmatter(md: Path) -> dict:
     text = md.read_text(encoding="utf-8")
     m = re.match(r"---\n(.*?)\n---", text, re.DOTALL)
@@ -31,19 +32,25 @@ def parse_frontmatter(md: Path) -> dict:
                 k, v = line.split(":", 1)
                 fm[k.strip()] = v.strip().strip('"')
     return fm
+# === END_PARSE_TRACKER_FRONTMATTER ===
 
 
+# === START_TOP_PREFIX_TRACKER ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_TRACKER ===
 
 
+# === START_INIT_TRACKER_DB_CLI ===
 def cmd_init(args):
     conn().close()
     print(f"Initialized {DB}")
+# === END_INIT_TRACKER_DB_CLI ===
 
 
+# === START_ADD_ATTEMPT_CLI ===
 def cmd_add(args):
     md = Path(args.path)
     if not md.exists():
@@ -67,8 +74,10 @@ def cmd_add(args):
     c.commit()
     print(f"Logged: {subject}/{kes} → {args.result}")
     c.close()
+# === END_ADD_ATTEMPT_CLI ===
 
 
+# === START_COMPUTE_TRACKER_STATS ===
 def cmd_stats(args):
     c = conn()
     rows = c.execute("""
@@ -91,8 +100,10 @@ def cmd_stats(args):
         rate = p / t if t else 0
         bar = "█" * int(rate * 10) + "░" * (10 - int(rate * 10))
         print(f"  {kes:<8} [{bar}] {int(rate*100):>3}%  ({p}p/{f}f/{pa}~ of {t})")
+# === END_COMPUTE_TRACKER_STATS ===
 
 
+# === START_LIST_WEAK_KES ===
 def cmd_weak(args):
     c = conn()
     rows = c.execute("""
@@ -110,8 +121,10 @@ def cmd_weak(args):
     print("Weak КЭС (pass rate < 50%, min 2 attempts):")
     for subj, kes, rate, total in rows:
         print(f"  {subj}/{kes}: {int(rate*100)}% over {total} attempts")
+# === END_LIST_WEAK_KES ===
 
 
+# === START_LIST_RECENT_ATTEMPTS ===
 def cmd_list(args):
     c = conn()
     q = "SELECT ts, subject, kes, result, task_number, note FROM attempts"
@@ -125,8 +138,10 @@ def cmd_list(args):
     for ts, subj, kes, res, tn, note in rows:
         flag = {"pass": "✓", "fail": "✗", "partial": "~"}.get(res, "?")
         print(f"  {flag} {ts[:16]}  {subj}/{kes:<6}  №{tn or '?':<4}  {note[:40]}")
+# === END_LIST_RECENT_ATTEMPTS ===
 
 
+# === START_RUN_TRACKER_CLI ===
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -143,6 +158,7 @@ def main():
 
     {"init": cmd_init, "add": cmd_add, "stats": cmd_stats,
      "weak": cmd_weak, "list": cmd_list}[args.cmd](args)
+# === END_RUN_TRACKER_CLI ===
 
 
 if __name__ == "__main__":

@@ -19,15 +19,19 @@ from db import connect, DB_PATH
 SUBJECTS = ["math_profile", "physics", "russian", "informatics"]
 
 
+# === START_TOP_PREFIX_STATS ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_STATS ===
 
 
+# === START_RENDER_PROGRESS_BAR ===
 def bar(rate: float, width: int = 10) -> str:
     filled = int(rate * width)
     return "█" * filled + "░" * (width - filled)
+# === END_RENDER_PROGRESS_BAR ===
 
 
 def main():
@@ -40,6 +44,7 @@ def main():
         print("No DB. Run some tasks first.")
         return
 
+    # === START_COMPUTE_GLOBAL_STATS ===
     c = connect()
 
     attempts = {}
@@ -64,6 +69,7 @@ def main():
         generations_by_kes[(subj, kes)] += 1
 
     c.close()
+    # === END_COMPUTE_GLOBAL_STATS ===
 
     subjects = [args.subject] if args.subject else SUBJECTS
 

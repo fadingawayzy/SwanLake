@@ -12,13 +12,16 @@ from typing import Optional
 from openai import OpenAI, APIError, APITimeoutError, APIConnectionError, RateLimitError
 
 
+# === START_MAKE_OPENROUTER_CLIENT ===
 def make_client(api_key: Optional[str] = None) -> OpenAI:
     key = api_key or os.environ.get("OPENROUTER_API_KEY")
     if not key:
         raise RuntimeError("OPENROUTER_API_KEY not set")
     return OpenAI(api_key=key, base_url="https://openrouter.ai/api/v1")
+# === END_MAKE_OPENROUTER_CLIENT ===
 
 
+# === START_CALL_LLM_WITH_RETRY ===
 def complete(client: OpenAI, model: str, prompt: str,
              max_tokens: int = 16384, temperature: float = 0.3,
              max_retries: int = 4, base_delay: float = 2.0) -> str:
@@ -50,12 +53,17 @@ def complete(client: OpenAI, model: str, prompt: str,
                 continue
             raise
     raise RuntimeError(f"LLM failed after {max_retries} retries: {last_err}")
+# === END_CALL_LLM_WITH_RETRY ===
 
 
+# === START_GET_PRIMARY_MODEL ===
 def get_primary_model() -> str:
     return os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-r1")
+# === END_GET_PRIMARY_MODEL ===
 
 
+# === START_GET_VERIFIER_MODEL ===
 def get_verifier_model() -> str:
     """Different model for cross-verification. Independent errors → higher catch rate."""
     return os.environ.get("OPENROUTER_VERIFIER_MODEL", "google/gemini-2.5-flash")
+# === END_GET_VERIFIER_MODEL ===

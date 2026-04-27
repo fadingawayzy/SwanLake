@@ -13,12 +13,15 @@ from pathlib import Path
 SUBJECTS = ["math_profile", "physics", "russian", "informatics"]
 
 
+# === START_TOP_PREFIX_COVERAGE ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_COVERAGE ===
 
 
+# === START_ANALYZE_COVERAGE ===
 def main():
     framework = json.loads(Path("modification_framework.json").read_text(encoding="utf-8"))
 
@@ -46,6 +49,7 @@ def main():
         print(f"  In batch PLAN:           {sum(1 for s,_ in plan_kes if s==subj)}")
         print(f"  Missing from framework:  {len(missing_fw)}  → {sorted(missing_fw)}")
         print(f"  Missing from PLAN:       {len(missing_plan)}  → {sorted(missing_plan)}")
+# === END_ANALYZE_COVERAGE ===
 
 
 if __name__ == "__main__":

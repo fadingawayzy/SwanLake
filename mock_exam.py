@@ -27,27 +27,33 @@ from llm import complete
 
 load_dotenv()
 
+# === START_DEFINE_EXAM_TASK_COUNTS ===
 EXPECTED_TASK_COUNT = {
     "math_profile": 19,
     "physics": 30,
     "russian": 27,
     "informatics": 27,
 }
+# === END_DEFINE_EXAM_TASK_COUNTS ===
 
+# === START_DEFINE_EXAM_TIME_LIMITS ===
 TIME_LIMIT_MIN = {
     "math_profile": 235,
     "physics": 235,
     "russian": 210,
     "informatics": 235,
 }
+# === END_DEFINE_EXAM_TIME_LIMITS ===
 
-
+# === START_TOP_PREFIX_EXAM ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_EXAM ===
 
 
+# === START_BUCKET_TASKS_BY_KES ===
 def by_kes(tasks: list[dict]) -> dict[str, list[dict]]:
     buckets: dict[str, list] = {}
     for t in tasks:
@@ -55,13 +61,17 @@ def by_kes(tasks: list[dict]) -> dict[str, list[dict]]:
         if k:
             buckets.setdefault(k, []).append(t)
     return buckets
+# === END_BUCKET_TASKS_BY_KES ===
 
 
+# === START_PICK_VARIANT_PREFER_LATEX ===
 def pick_variant(pool: list[dict]) -> dict | None:
     latex = [t for t in pool if t.get("latex_text")]
     return random.choice(latex) if latex else (random.choice(pool) if pool else None)
+# === END_PICK_VARIANT_PREFER_LATEX ===
 
 
+# === START_HARDEN_TASK ===
 def harden(task: dict, framework: dict, subject: str, client, model: str) -> dict:
     subj_key = get_subject_key(subject)
     kes = task.get("kes", "").split(" ")[0]
@@ -79,8 +89,10 @@ def harden(task: dict, framework: dict, subject: str, client, model: str) -> dic
     prompt = build_prompt(task, strategy_name, strategy_desc, 3, framework)
     text = complete(client, model, prompt, max_tokens=16384)
     return parse_response(text)
+# === END_HARDEN_TASK ===
 
 
+# === START_RENDER_EXAM_MD ===
 def render_exam(subject: str, items: list[dict], hard: bool) -> str:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     n = EXPECTED_TASK_COUNT.get(subject, 0)
@@ -135,8 +147,10 @@ def render_exam(subject: str, items: list[dict], hard: bool) -> str:
                 lines += [f"### Решение №{it.get('task_number', i)}", "", sol, ""]
 
     return "\n".join(lines)
+# === END_RENDER_EXAM_MD ===
 
 
+# === START_RUN_MOCK_EXAM_CLI ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--subject", required=True,
@@ -197,6 +211,7 @@ def main():
     md_path.write_text(render_exam(args.subject, items, args.hard), encoding="utf-8")
     print(f"\nSaved: {md_path}")
     print(f"Time limit: {TIME_LIMIT_MIN[args.subject]} min | {len(items)} tasks")
+# === END_RUN_MOCK_EXAM_CLI ===
 
 
 if __name__ == "__main__":

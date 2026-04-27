@@ -31,6 +31,7 @@ from generator import (
 load_dotenv()
 
 
+# === START_LOAD_PLAN_FROM_FILE ===
 def load_plan_from_file(path: Path) -> list[tuple]:
     p = path.resolve()
     if not p.is_file() or p.suffix != ".py":
@@ -43,10 +44,12 @@ def load_plan_from_file(path: Path) -> list[tuple]:
     if not hasattr(mod, "PLAN"):
         raise SystemExit(f"ERROR: {p} does not define PLAN")
     return mod.PLAN
+# === END_LOAD_PLAN_FROM_FILE ===
 
 # ── Daily practice plan ──────────────────────────────────────────────────────
 # Each entry: (subject, kes_prefix, strategy, difficulty, count)
 # Adjust based on your weak spots.
+# === START_DEFINE_DEFAULT_PLAN ===
 PLAN = [
     # Математика — текущие пробелы
     ("math_profile", "2.5", "замена",           3, 2),  # логарифмы с заменой
@@ -66,19 +69,25 @@ PLAN = [
     # Русский (текстовые задания — реже)
     ("russian",      "3.8.7", "скрытая_позиция", 2, 1),
 ]
+# === END_DEFINE_DEFAULT_PLAN ===
 
 VAULT_ROOT = Path("vault")
 
 
+# === START_LOAD_BATCH_TASKS ===
 def load_tasks(subject: str) -> list[dict]:
     f = Path("data") / f"{subject}.json"
     return json.loads(f.read_text(encoding="utf-8"))
+# === END_LOAD_BATCH_TASKS ===
 
 
+# === START_LOAD_BATCH_FRAMEWORK ===
 def load_framework() -> dict:
     return json.loads(Path("modification_framework.json").read_text(encoding="utf-8"))
+# === END_LOAD_BATCH_FRAMEWORK ===
 
 
+# === START_LOOKUP_STRATEGY_DESC ===
 def get_strategy_desc(framework: dict, subject: str, strategy: str) -> str:
     subj = framework["subjects"].get(subject, {})
     for kes_data in subj.get("kes_modifications", {}).values():
@@ -87,8 +96,10 @@ def get_strategy_desc(framework: dict, subject: str, strategy: str) -> str:
                 return lvl["desc"]
     gmod = framework["global_modifications"].get(strategy, {})
     return gmod.get("desc", strategy)
+# === END_LOOKUP_STRATEGY_DESC ===
 
 
+# === START_RUN_BATCH_GENERATE ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--plan", type=str, help="Path to external PLAN file (Python module with PLAN=...)")
@@ -153,6 +164,7 @@ def main():
             done += 1
 
     print(f"\nComplete: {done} generated, {errors} errors.")
+# === END_RUN_BATCH_GENERATE ===
 
 
 if __name__ == "__main__":

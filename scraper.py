@@ -15,24 +15,29 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from mathml_to_latex import extract_latex_from_block
 
+# === START_INIT_INSECURE_SSL_FLAG ===
 INSECURE = os.environ.get("EGE_SCRAPER_INSECURE") == "1"
 if INSECURE:
     warnings.filterwarnings("ignore")
     print("WARN: SSL verification disabled via EGE_SCRAPER_INSECURE=1")
+# === END_INIT_INSECURE_SSL_FLAG ===
 
 BASE = "https://ege.fipi.ru/bank"
 
+# === START_DEFINE_FIPI_SUBJECTS_MAP ===
 SUBJECTS = {
     "math_profile":  "AC437B34557F88EA4115D2F374B0A07B",
     "russian":       "AF0ED3F2557F8FFC4C06F80B6803FD26",
     "physics":       "BA1F39653304A5B041B656915DC36B38",
     "informatics":   "B9ACA5BBB2E19E434CD6BEC25284C67F",
 }
+# === END_DEFINE_FIPI_SUBJECTS_MAP ===
 
 OUT = Path("data")
 OUT.mkdir(exist_ok=True)
 
 
+# === START_MAKE_FIPI_SESSION ===
 def make_session(proj_id: str) -> requests.Session:
     s = requests.Session()
     s.verify = not INSECURE
@@ -43,14 +48,18 @@ def make_session(proj_id: str) -> requests.Session:
     })
     s.get(f"{BASE}/index.php?proj={proj_id}", timeout=15)
     return s
+# === END_MAKE_FIPI_SESSION ===
 
 
+# === START_CLEAN_FIPI_TEXT ===
 def clean_text(text: str) -> str:
     text = text.replace("\xa0", " ").replace(" ", " ").replace(" ", " ")
     text = re.sub(r"\s+", " ", text).strip()
     return text
+# === END_CLEAN_FIPI_TEXT ===
 
 
+# === START_PARSE_TASK_METADATA_FIPI ===
 def parse_metadata(soup: BeautifulSoup, hash_id: str) -> dict:
     """Extract КЭС and answer format from the sibling info div."""
     info_div = soup.find(id=f"i{hash_id}")
@@ -80,14 +89,18 @@ def parse_metadata(soup: BeautifulSoup, hash_id: str) -> dict:
         "kes": "; ".join(kes_parts),
         "answer_format": answer_format,
     }
+# === END_PARSE_TASK_METADATA_FIPI ===
 
 
+# === START_EXTRACT_TASK_NUMBER_FIPI ===
 def extract_task_number(answer_type: str) -> str:
     """Extract task number like '№5' from answer_type string."""
     m = re.search(r"Задание\s*№(\d+)", answer_type)
     return m.group(1) if m else ""
+# === END_EXTRACT_TASK_NUMBER_FIPI ===
 
 
+# === START_PARSE_QUESTIONS_PAGE_FIPI ===
 def parse_questions(html_bytes: bytes) -> list[dict]:
     soup = BeautifulSoup(html_bytes, "lxml", from_encoding="windows-1251")
     blocks = soup.find_all(class_="qblock")
@@ -131,8 +144,10 @@ def parse_questions(html_bytes: bytes) -> list[dict]:
             })
 
     return results
+# === END_PARSE_QUESTIONS_PAGE_FIPI ===
 
 
+# === START_DETECT_TOTAL_PAGES_FIPI ===
 def get_total_pages(session: requests.Session, proj_id: str) -> int:
     r = session.get(
         f"{BASE}/questions.php?proj={proj_id}&init_filter_themes=1",
@@ -147,8 +162,10 @@ def get_total_pages(session: requests.Session, proj_id: str) -> int:
         print(f"  Total tasks: {total}, pages: {pages}")
         return pages
     return 1
+# === END_DETECT_TOTAL_PAGES_FIPI ===
 
 
+# === START_SCRAPE_ONE_SUBJECT_FIPI ===
 def scrape_subject(name: str, proj_id: str) -> list[dict]:
     print(f"\n=== {name} (proj={proj_id}) ===")
     session = make_session(proj_id)
@@ -170,8 +187,10 @@ def scrape_subject(name: str, proj_id: str) -> list[dict]:
         time.sleep(0.3)  # polite delay
 
     return all_tasks
+# === END_SCRAPE_ONE_SUBJECT_FIPI ===
 
 
+# === START_RUN_SCRAPER_MAIN ===
 def main():
     for name, proj_id in SUBJECTS.items():
         out_file = OUT / f"{name}.json"
@@ -189,6 +208,7 @@ def main():
             encoding="utf-8"
         )
         print(f"  Saved {len(tasks)} tasks -> {out_file}")
+# === END_RUN_SCRAPER_MAIN ===
 
 
 if __name__ == "__main__":

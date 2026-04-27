@@ -22,6 +22,7 @@ from pathlib import Path
 from generator import to_obsidian, load_framework, get_subject_key
 from db import connect, DB_PATH
 
+# === START_DEFINE_SEED_STRATEGIES ===
 SUBJECTS = ["math_profile", "physics", "russian", "informatics"]
 STRATEGIES_PER_SUBJ = {
     "math_profile": ["замена", "ОДЗ", "параметр", "add_constraint", "chain_problems"],
@@ -29,14 +30,18 @@ STRATEGIES_PER_SUBJ = {
     "russian": ["скрытая_позиция", "change_question", "add_constraint"],
     "informatics": ["рекурсия", "найти_функцию", "цикл", "increase_dimensions"],
 }
+# === END_DEFINE_SEED_STRATEGIES ===
 
 
+# === START_TOP_PREFIX_SEED ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_SEED ===
 
 
+# === START_BUILD_DEMO_SOLUTION ===
 def demo_solution(task_text: str, kes: str) -> dict:
     return {
         "task": task_text,
@@ -51,8 +56,10 @@ def demo_solution(task_text: str, kes: str) -> dict:
         "difficulty": random.choice([2, 3, 3, 3, 4]),
         "technique": "",
     }
+# === END_BUILD_DEMO_SOLUTION ===
 
 
+# === START_SEED_GENERATIONS ===
 def seed_generations(framework: dict, per_subject: int = 12) -> list[Path]:
     vault = Path("vault")
     created_paths = []
@@ -99,8 +106,10 @@ def seed_generations(framework: dict, per_subject: int = 12) -> list[Path]:
     db.commit()
     db.close()
     return created_paths
+# === END_SEED_GENERATIONS ===
 
 
+# === START_SEED_ATTEMPTS ===
 def seed_attempts(paths: list[Path], attempt_ratio: float = 0.6):
     """Simulate student attempts: bias fail rate by difficulty and KES."""
     db = connect()
@@ -141,8 +150,10 @@ def seed_attempts(paths: list[Path], attempt_ratio: float = 0.6):
     db.commit()
     db.close()
     print(f"  Seeded {len(sampled)} attempts")
+# === END_SEED_ATTEMPTS ===
 
 
+# === START_SEED_VERIFICATIONS ===
 def seed_verifications(paths: list[Path], verify_ratio: float = 0.7,
                        mismatch_rate: float = 0.12):
     db = connect()
@@ -162,14 +173,18 @@ def seed_verifications(paths: list[Path], verify_ratio: float = 0.7,
     db.commit()
     db.close()
     print(f"  Seeded {len(sampled)} verifications ({int(mismatch_rate*100)}% mismatches)")
+# === END_SEED_VERIFICATIONS ===
 
 
+# === START_RESET_DEMO_DB ===
 def reset_db():
     if DB_PATH.exists():
         DB_PATH.unlink()
     print(f"  Removed {DB_PATH}")
+# === END_RESET_DEMO_DB ===
 
 
+# === START_RUN_DEMO_SEEDER_CLI ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--reset", action="store_true", help="Wipe DB first")
@@ -198,6 +213,7 @@ def main():
     print(f"  python srs.py schedule")
     print(f"  python moc.py  # rebuild MOC stats")
     print(f"  Open vault/_moc/HOME.md in Obsidian")
+# === END_RUN_DEMO_SEEDER_CLI ===
 
 
 if __name__ == "__main__":

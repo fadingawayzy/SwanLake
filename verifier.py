@@ -25,6 +25,7 @@ from db import connect
 load_dotenv()
 
 
+# === START_STRIP_CALLOUT_PREFIX_VERIFY ===
 def _strip_callout(block: str) -> str:
     """Drop leading '> ' / '>' from each line of a callout body."""
     out = []
@@ -36,8 +37,10 @@ def _strip_callout(block: str) -> str:
         else:
             out.append(line)
     return "\n".join(out).strip()
+# === END_STRIP_CALLOUT_PREFIX_VERIFY ===
 
 
+# === START_PARSE_GENERATED_MD_VERIFY ===
 def parse_md(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     result = {"task": "", "answer": "", "subject": "", "kes": ""}
@@ -66,8 +69,10 @@ def parse_md(path: Path) -> dict:
             result["answer"] = m.group(1).strip()
 
     return result
+# === END_PARSE_GENERATED_MD_VERIFY ===
 
 
+# === START_NORMALIZE_VERIFY_ANSWER ===
 def normalize(ans: str) -> str:
     a = ans.lower().strip()
     a = re.sub(r"[\s$\\]", "", a)
@@ -75,8 +80,10 @@ def normalize(ans: str) -> str:
     a = re.sub(r"\\left|\\right|\\,|\\;", "", a)
     a = re.sub(r"\\frac\{([^}]+)\}\{([^}]+)\}", r"\1/\2", a)
     return a
+# === END_NORMALIZE_VERIFY_ANSWER ===
 
 
+# === START_ASK_VERIFIER_LLM ===
 def verify(task_text: str, client, model: str) -> tuple[str, str]:
     prompt = f"""Реши задачу ЕГЭ. Сначала кратко реши, затем на отдельной строке дай финальный ответ.
 
@@ -90,8 +97,10 @@ def verify(task_text: str, client, model: str) -> tuple[str, str]:
     text = complete(client, model, prompt, max_tokens=8192, temperature=0.1)
     m = re.search(r"ОТВЕТ:\s*(.+?)(?=\n|$)", text)
     return (m.group(1).strip() if m else ""), text
+# === END_ASK_VERIFIER_LLM ===
 
 
+# === START_VERIFY_SINGLE_FILE ===
 def verify_file(md: Path, client, model: str, flag_only: bool = False) -> bool:
     parsed = parse_md(md)
     if not parsed["task"] or not parsed["answer"]:
@@ -123,8 +132,10 @@ def verify_file(md: Path, client, model: str, flag_only: bool = False) -> bool:
             print(f"     claimed:  {parsed['answer'][:80]}")
             print(f"     verified: {verified[:80]}")
     return match
+# === END_VERIFY_SINGLE_FILE ===
 
 
+# === START_RUN_VERIFIER_CLI ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("path", nargs="?", help="Single MD file")
@@ -163,3 +174,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# === END_RUN_VERIFIER_CLI ===

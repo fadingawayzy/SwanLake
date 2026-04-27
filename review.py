@@ -22,6 +22,7 @@ from db import connect
 from datetime import datetime
 
 
+# === START_STRIP_CALLOUT_PREFIX_REVIEW ===
 def _strip_callout(block: str) -> str:
     out = []
     for line in block.splitlines():
@@ -32,8 +33,10 @@ def _strip_callout(block: str) -> str:
         else:
             out.append(line)
     return "\n".join(out).strip()
+# === END_STRIP_CALLOUT_PREFIX_REVIEW ===
 
 
+# === START_PARSE_GENERATED_MD_REVIEW ===
 def parse_md(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     out = {"task": "", "solution": "", "answer": ""}
@@ -59,15 +62,19 @@ def parse_md(path: Path) -> dict:
         m = re.search(r"\*\*Ответ:\*\*\s*(.+?)\n", text)
         if m: out["answer"] = m.group(1).strip()
     return out
+# === END_PARSE_GENERATED_MD_REVIEW ===
 
 
+# === START_NORMALIZE_REVIEW_ANSWER ===
 def normalize(a: str) -> str:
     a = a.lower().strip()
     a = re.sub(r"[\s$\\]", "", a)
     a = a.replace(",", ".")
     return a
+# === END_NORMALIZE_REVIEW_ANSWER ===
 
 
+# === START_LOG_REVIEW_ATTEMPT ===
 def log_attempt(md: Path, result: str, note: str):
     fm = parse_frontmatter(md)
     c = connect()
@@ -81,8 +88,10 @@ def log_attempt(md: Path, result: str, note: str):
                str(md.resolve()), result, note))
     c.commit()
     c.close()
+# === END_LOG_REVIEW_ATTEMPT ===
 
 
+# === START_REVIEW_ONE_TASK_INTERACTIVE ===
 def review_one(md: Path):
     parsed = parse_md(md)
     if not parsed["task"]:
@@ -133,8 +142,10 @@ def review_one(md: Path):
 
     log_attempt(md, result, note)
     print(f"→ logged {result}")
+# === END_REVIEW_ONE_TASK_INTERACTIVE ===
 
 
+# === START_RUN_REVIEW_CLI ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--file", help="Single MD file")
@@ -174,3 +185,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# === END_RUN_REVIEW_CLI ===

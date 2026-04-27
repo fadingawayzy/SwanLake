@@ -27,3 +27,4 @@ vault/russian/
 # Локальные планы / временные файлы
 plan.py
 *.tmp
+.grace

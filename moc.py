@@ -21,6 +21,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
+# === START_DEFINE_MOC_CONSTS ===
 VAULT = Path("vault")
 MOC_ROOT = VAULT / "_moc"
 FRAMEWORK = json.loads(Path("modification_framework.json").read_text(encoding="utf-8"))
@@ -32,26 +33,31 @@ SUBJECT_RU = {
     "russian": "Русский язык",
     "informatics": "Информатика",
 }
+# === END_DEFINE_MOC_CONSTS ===
 
 
+# === START_TOP_PREFIX_MOC ===
 def top_prefix(kes: str) -> str:
     k = kes.split(" ")[0]
     parts = k.split(".")
     return ".".join(parts[:2]) if len(parts) >= 2 else k
+# === END_TOP_PREFIX_MOC ===
 
-
+# === START_SAFE_LINK_MOC ===
 def safe_link(s: str) -> str:
     """Replace path-illegal chars in topic to keep it usable as filename + wikilink target.
     U+2215 (∕) renders like ASCII '/' but is not a path separator."""
     return s.replace("/", "∕").replace("\\", "∖").replace(":", "꞉")
+# === END_SAFE_LINK_MOC ===
 
-
+# === START_KES_MATCH_MOC ===
 def kes_match(code: str, fw_code: str) -> bool:
     a = code.split(".")
     b = fw_code.split(".")
     return len(b) <= len(a) and a[:len(b)] == b
+# === END_KES_MATCH_MOC ===
 
-
+# === START_LOOKUP_KES_FRAMEWORK_MOC ===
 def lookup_fw(mods: dict, code: str) -> tuple[str, list]:
     if code in mods:
         return mods[code].get("topic", ""), mods[code].get("levels", [])
@@ -62,13 +68,15 @@ def lookup_fw(mods: dict, code: str) -> tuple[str, list]:
     if best_key:
         return mods[best_key].get("topic", ""), mods[best_key].get("levels", [])
     return "", []
+# === END_LOOKUP_KES_FRAMEWORK_MOC ===
 
-
+# === START_WRITE_MOC_FILE ===
 def write(path: Path, content: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+# === END_WRITE_MOC_FILE ===
 
-
+# === START_BUILD_HOME_MOC ===
 def build_home():
     lines = [
         "---",
@@ -141,8 +149,9 @@ def build_home():
         "",
     ]
     write(MOC_ROOT / "HOME.md", "\n".join(lines))
+# === END_BUILD_HOME_MOC ===
 
-
+# === START_BUILD_SUBJECT_MOC ===
 def build_subject(subj: str):
     ru = SUBJECT_RU[subj]
     mods = FRAMEWORK["subjects"].get(subj, {}).get("kes_modifications", {})
@@ -198,8 +207,9 @@ def build_subject(subj: str):
         "",
     ]
     write(MOC_ROOT / f"{ru}.md", "\n".join(lines))
+# === END_BUILD_SUBJECT_MOC ===
 
-
+# === START_BUILD_KES_MOC ===
 def build_kes_moc(subj: str, code: str, topic: str, levels: list):
     slug = safe_link(topic)
     lines = [
@@ -244,8 +254,9 @@ def build_kes_moc(subj: str, code: str, topic: str, levels: list):
         "",
     ]
     write(MOC_ROOT / "kes" / f"КЭС {code} {slug}.md", "\n".join(lines))
+# === END_BUILD_KES_MOC ===
 
-
+# === START_BUILD_TECHNIQUE_MOC ===
 def build_technique(name: str, desc: str):
     lines = [
         "---",
@@ -280,8 +291,9 @@ def build_technique(name: str, desc: str):
         "",
     ]
     write(MOC_ROOT / "techniques" / f"Приём · {name}.md", "\n".join(lines))
+# === END_BUILD_TECHNIQUE_MOC ===
 
-
+# === START_RUN_MOC_BUILDER_CLI ===
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--home-only", action="store_true")
@@ -324,7 +336,7 @@ def main():
     print(f"  {len(SUBJECTS)} subjects")
     print(f"  KES hubs per subject")
     print(f"  {len(techniques)} technique hubs")
-
+# === END_RUN_MOC_BUILDER_CLI ===
 
 if __name__ == "__main__":
     main()

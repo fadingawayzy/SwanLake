@@ -19,6 +19,7 @@ from pathlib import Path
 from db import connect, DB_PATH as DB
 
 
+# === START_COMPUTE_SM2_INTERVAL ===
 def sm2_interval(history: list[str]) -> tuple[int, float]:
     """Return (days_until_next, ease_factor). history = oldest→newest results."""
     if not history:
@@ -41,8 +42,10 @@ def sm2_interval(history: list[str]) -> tuple[int, float]:
             else:
                 interval = int(round(interval * ef))
     return interval, ef
+# === END_COMPUTE_SM2_INTERVAL ===
 
 
+# === START_LOAD_SRS_CARDS ===
 def load_cards() -> list[dict]:
     if not DB.exists():
         return []
@@ -80,8 +83,10 @@ def load_cards() -> list[dict]:
             "last_result": results[-1],
         })
     return cards
+# === END_LOAD_SRS_CARDS ===
 
 
+# === START_LIST_DUE_CARDS ===
 def cmd_due(args):
     now = datetime.now()
     _cards = load_cards()
@@ -96,16 +101,20 @@ def cmd_due(args):
         tag = f"{overdue}d overdue" if overdue > 0 else "today"
         flag = {"pass": "✓", "fail": "✗", "partial": "~"}.get(c["last_result"], "?")
         print(f"  [{tag:>11}] {flag} {c['subject']}/{c['kes']:<6} iv={c['interval']:>3}d  {Path(c['md_path']).name}")
+# === END_LIST_DUE_CARDS ===
 
 
+# === START_LIST_QUEUE_CARDS ===
 def cmd_queue(args):
     now = datetime.now()
     cards = [c for c in load_cards() if c["due"] <= now]
     cards.sort(key=lambda c: (c["last_result"] != "fail", c["due"]))
     for c in cards[:args.limit]:
         print(c["md_path"])
+# === END_LIST_QUEUE_CARDS ===
 
 
+# === START_SUMMARIZE_SRS_SCHEDULE ===
 def cmd_schedule(args):
     cards = load_cards()
     buckets = {"overdue": 0, "today": 0, "week": 0, "month": 0, "later": 0}
@@ -120,8 +129,10 @@ def cmd_schedule(args):
     print(f"Total cards: {len(cards)}")
     for k, v in buckets.items():
         print(f"  {k:<10} {v}")
+# === END_SUMMARIZE_SRS_SCHEDULE ===
 
 
+# === START_RUN_SRS_CLI ===
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -131,6 +142,7 @@ def main():
     sub.add_parser("schedule")
     args = p.parse_args()
     {"due": cmd_due, "queue": cmd_queue, "schedule": cmd_schedule}[args.cmd](args)
+# === END_RUN_SRS_CLI ===
 
 
 if __name__ == "__main__":

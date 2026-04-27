@@ -3,12 +3,15 @@ import json
 import os
 import subprocess
 
+# === START_INIT_STREAMLIT_PAGE_DASH ===
 st.set_page_config(page_title="ЕГЭ — панель", page_icon=None, layout="wide")
 st.title("ЕГЭ — панель управления")
+# === END_INIT_STREAMLIT_PAGE_DASH ===
 
 SUBJECTS = ["math_profile", "physics", "russian", "informatics"]
 
 
+# === START_LOAD_FRAMEWORK_CACHED_DASH ===
 @st.cache_data
 def load_framework():
     try:
@@ -16,8 +19,10 @@ def load_framework():
             return json.load(f)
     except FileNotFoundError:
         return {}
+# === END_LOAD_FRAMEWORK_CACHED_DASH ===
 
 
+# === START_ENUMERATE_STRATEGIES_DASH ===
 def get_strategies(framework: dict, subject: str) -> list[str]:
     subj = framework.get("subjects", {}).get(subject, {})
     mods = subj.get("kes_modifications", {})
@@ -34,8 +39,10 @@ def get_strategies(framework: dict, subject: str) -> list[str]:
             seen.add(gname)
             names.append(gname)
     return names
+# === END_ENUMERATE_STRATEGIES_DASH ===
 
 
+# === START_COMPUTE_DATA_LAKE_STATS_DASH ===
 def get_data_lake_stats() -> dict:
     stats = {}
     data_dir = "data"
@@ -49,8 +56,10 @@ def get_data_lake_stats() -> dict:
                     except json.JSONDecodeError:
                         stats[subj] = 0
     return stats
+# === END_COMPUTE_DATA_LAKE_STATS_DASH ===
 
 
+# === START_COMPUTE_VAULT_ANALYTICS_DASH ===
 def get_vault_analytics() -> dict:
     vault_dir = "vault"
     stats = {"total": 0, "solved": 0, "errors": 0}
@@ -69,12 +78,14 @@ def get_vault_analytics() -> dict:
             if "status: \"fail\"" in content or "#ошибка" in content:
                 stats["errors"] += 1
     return stats
+# === END_COMPUTE_VAULT_ANALYTICS_DASH ===
 
 
 framework = load_framework()
 lake_stats = get_data_lake_stats()
 vault_stats = get_vault_analytics()
 
+# === START_RENDER_GENERATION_PANEL_DASH ===
 col1, col2 = st.columns([1, 1])
 
 with col1:
@@ -119,7 +130,9 @@ with col1:
                         st.error("Ошибка выполнения.")
                         if result.stderr:
                             st.code(result.stderr, language="text")
+# === END_RENDER_GENERATION_PANEL_DASH ===
 
+# === START_RENDER_STATUS_PANEL_DASH ===
 with col2:
     st.header("Состояние")
 
@@ -145,3 +158,4 @@ with col2:
     else:
         for subj, count in lake_stats.items():
             st.metric(f"{subj}", count)
+# === END_RENDER_STATUS_PANEL_DASH ===

@@ -2,6 +2,7 @@
 
 from bs4 import BeautifulSoup, Tag, NavigableString
 
+# === START_DEFINE_MATHML_OPERATOR_MAP ===
 OPERATOR_MAP = {
     "−": "-", "–": "-", "·": r"\cdot", "×": r"\times",
     "√": r"\sqrt", "∞": r"\infty", "±": r"\pm", "∓": r"\mp",
@@ -14,20 +15,26 @@ OPERATOR_MAP = {
     "⟨": r"\langle", "⟩": r"\rangle",
     " ": " ", " ": " ", " ": " ", "⁠": "",
 }
+# === END_DEFINE_MATHML_OPERATOR_MAP ===
 
 
+# === START_GET_TAG_NAME_NS_STRIPPED ===
 def _tag_name(el) -> str:
     if not isinstance(el, Tag):
         return ""
     name = el.name or ""
     return name.split(":")[-1].lower()
+# === END_GET_TAG_NAME_NS_STRIPPED ===
 
 
+# === START_GET_TAG_KIDS_FILTERED ===
 def _tag_kids(el):
     """Only Tag children, no whitespace NavigableStrings."""
     return [c for c in el.children if isinstance(c, Tag)]
+# === END_GET_TAG_KIDS_FILTERED ===
 
 
+# === START_CONVERT_MATHML_NODE ===
 def convert(el) -> str:
     if isinstance(el, NavigableString):
         t = str(el)
@@ -148,8 +155,10 @@ def convert(el) -> str:
 
     # Unknown tag: recurse
     return cjoin()
+# === END_CONVERT_MATHML_NODE ===
 
 
+# === START_EXTRACT_LATEX_FROM_BLOCK ===
 def extract_latex_from_block(form_tag) -> str:
     """
     Convert a checkform div to LaTeX-enriched text.
@@ -209,8 +218,10 @@ def extract_latex_from_block(form_tag) -> str:
     result = " ".join(parts)
     result = re.sub(r"\s+", " ", result).strip()
     return result
+# === END_EXTRACT_LATEX_FROM_BLOCK ===
 
 
+# === START_RUN_MATHML_TEST_DEMO ===
 if __name__ == "__main__":
     # Test with complex fraction from ФИПИ
     test = """<td class="cell_0">
@@ -244,3 +255,4 @@ if __name__ == "__main__":
     </m:mrow></m:semantics></m:math></td>"""
     soup2 = BeautifulSoup(test2, "lxml")
     print("Vector:", extract_latex_from_block(soup2.find("td")))
+# === END_RUN_MATHML_TEST_DEMO ===
