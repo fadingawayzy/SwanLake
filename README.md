@@ -524,7 +524,4 @@ python moc.py
 
 Задачи ФИПИ — публичны (открытый банк ЕГЭ).
 Код — для личного использования.
-# GRACESwanLake
-# GRACESwanLake
-# GRACESwanLake
-# GRACESwanLake
+
