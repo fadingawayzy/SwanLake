@@ -58,7 +58,7 @@ def complete(client: OpenAI, model: str, prompt: str,
 
 # === START_GET_PRIMARY_MODEL ===
 def get_primary_model() -> str:
-    return os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-r1")
+    return os.environ.get("OPENROUTER_MODEL", "qwen/qwen3-235b-a22b")
 # === END_GET_PRIMARY_MODEL ===
 
 

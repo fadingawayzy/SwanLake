@@ -122,7 +122,7 @@ $EDITOR .env
 
 ```
 OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=deepseek/deepseek-r1
+OPENROUTER_MODEL=qwen/qwen3-235b-a22b
 OPENROUTER_VERIFIER_MODEL=google/gemini-2.5-flash
 ```
 
@@ -191,7 +191,7 @@ python moc.py    # пересобрать индексы Obsidian
 
 ### 1. Генерация (`generator.py` / `batch_generate.py`)
 
-LLM (`OPENROUTER_MODEL`, по умолчанию `deepseek/deepseek-r1`) переписывает
+LLM (`OPENROUTER_MODEL`, по умолчанию `qwen/qwen3-235b-a22b`) переписывает
 задачу из банка ФИПИ под выбранный приём усложнения. Возвращает
 `ЗАДАНИЕ / РЕШЕНИЕ / ОТВЕТ / СЛОЖНОСТЬ / ПРИЁМ`. Файл сохраняется в
 `vault/<subject>/<kes>/*.md` со фронтматтером, callout-блоками
@@ -252,11 +252,12 @@ python srs.py schedule  # календарь
 | Модель | Вход $ / 1M | Выход $ / 1M | Назначение |
 |--------|-------------|--------------|------------|
 | qwen/qwen3-next-80b-a3b-instruct | 0.09 | 1.10 | дешёвый primary |
-| qwen/qwen3-235b-a22b | 0.45 | 1.82 | основной reasoning |
+| qwen/qwen3-235b-a22b | 0.455 | 1.82 | основной reasoning |
 | google/gemini-2.5-flash | 0.30 | 2.50 | верификатор |
-| deepseek/deepseek-r1 | 0.70 | 2.50 | топовый reasoning |
 
-Одна задача — 1.5–10k токенов вывода, итого ≈ $0.005–$0.025 в
+Снимок цен на 2026-04-28; актуальные см. openrouter.ai/models.
+
+Одна задача — 1.5–10k токенов вывода, итого ≈ $0.005–$0.02 в
 зависимости от модели. Free-варианты (`:free`) ограничены 8 rpm
 и временно троттлятся — годятся для смоук-теста.
 
@@ -566,5 +567,5 @@ python moc.py
 ## Лицензия / атрибуция
 
 Задачи ФИПИ — публичны (открытый банк ЕГЭ).
-Код — для личного использования.
+Код — MIT License (см. LICENSE).
 

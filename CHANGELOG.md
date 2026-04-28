@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+### Known issues
+- **DeepSeek-R1 default возвращал пустую строку**: на сложных задачах ФИПИ reasoning-токены провайдера потребляли весь бюджет ответа, `message.content` оставался пустым. `complete()` в `llm.py` читает только `content`, не `reasoning_content`. Default переключён на `qwen/qwen3-235b-a22b`. R1 вернётся в `.env.example` как опт-ин после расширения `complete()` fallback'ом на `reasoning_content`.
+
+### Changed
+- `OPENROUTER_MODEL` default: `deepseek/deepseek-r1` → `qwen/qwen3-235b-a22b`. Обоснование: e2e-тест 3 КЭС × 2 модели — R1 length=0 на всех трёх, Qwen3-235B length 976-1777 c корректным parse. Цена ↓ $0.025 → ~$0.008.
+- `OPENROUTER_VERIFIER_MODEL`: без изменений (`google/gemini-2.5-flash`), INV-003 продолжает соблюдаться.
+- Pricing table в README: snapshot на 2026-04-28, добавлен дисклеймер про актуальные цены на openrouter.ai/models.
+- README «Лицензия / атрибуция»: `Код — для личного использования` → `Код — MIT License (см. LICENSE)`.
+
+### Fixed
+- `parse_response` regex: убран обязательный `\n` после маркеров секций (теперь `\s*` вместо `\s*\n`), `СЛОЖНОСТЬ:\s*(\d+)` вместо `\d` для двузначных. Защита от R2 hallucination из ARCHITECTURE.md § 9.
+
 ## [0.2.0] — 2026-04-27
 
 ### Added — GRACE methodology integration

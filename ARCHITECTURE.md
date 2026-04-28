@@ -115,7 +115,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
     <blocks>
       <block id="MAKE_OPENROUTER_CLIENT">openai.OpenAI с base_url=https://openrouter.ai/api/v1</block>
       <block id="CALL_LLM_WITH_RETRY">chat.completions.create + экспоненциальный backoff с jitter, max_retries=4</block>
-      <block id="GET_PRIMARY_MODEL">env OPENROUTER_MODEL || "deepseek/deepseek-r1"</block>
+      <block id="GET_PRIMARY_MODEL">env OPENROUTER_MODEL || "qwen/qwen3-235b-a22b"</block>
       <block id="GET_VERIFIER_MODEL">env OPENROUTER_VERIFIER_MODEL || "google/gemini-2.5-flash"</block>
     </blocks>
     <calls_into>—</calls_into>
@@ -682,3 +682,4 @@ absolute path. Перенос `vault/` сломает все ссылки `attem
 - **SQLite без WAL**: `PRAGMA journal_mode=WAL` не выставлен. Параллельный verifier + review → возможен `database is locked` (см. R7).
 - **Frontmatter-парсер хрупок** к многострочным значениям и спискам (см. R8/INV-016).
 - **`dashboard.py`**: Streamlit-панель, запуск `streamlit run dashboard.py`. Без полноценной авторизации — поднимать только локально.
+- **DeepSeek-R1 несовместим с текущим `complete()`**: OpenRouter возвращает reasoning в `message.reasoning_content`, основной `message.content` остаётся пустым на сложных задачах ФИПИ (тест 2026-04-27: 3 КЭС × R1 → length=0). Использовать только после правки `llm.py:CALL_LLM_WITH_RETRY` (fallback на `reasoning_content` при пустом `content`).
