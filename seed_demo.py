@@ -91,7 +91,7 @@ def seed_generations(framework: dict, per_subject: int = 12) -> list[Path]:
             slug = f"demo_{subj}_{kes_prefix.replace('.', '-')}_{strategy}_{ts}_{i}"
             md_path = out_dir / f"{slug}.md"
 
-            md_content = to_obsidian(source, source, subj, strategy, parsed, framework)
+            md_content = to_obsidian(source, subj, strategy, parsed, framework)
             md_path.write_text(md_content, encoding="utf-8")
             created_paths.append(md_path)
 

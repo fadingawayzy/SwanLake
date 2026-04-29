@@ -156,7 +156,7 @@ def main():
             ts = datetime.now().strftime("%H%M%S")
             slug = f"{today}_{kes.replace('.', '-')}_{strategy}_{ts}_{i}"
             md_path = out_dir / f"{slug}.md"
-            md_content = to_obsidian(source, source, subject, strategy, parsed, framework)
+            md_content = to_obsidian(source, subject, strategy, parsed, framework)
             md_path.write_text(md_content, encoding="utf-8")
             log_generation(md_path, subject, kes, source["id"], strategy,
                            parsed.get("difficulty", difficulty), get_model())

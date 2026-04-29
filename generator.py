@@ -248,7 +248,7 @@ SUBJECT_RU = {
 
 
 # === START_RENDER_OBSIDIAN_NOTE ===
-def to_obsidian(task: dict, source: dict, subject: str, strategy: str,
+def to_obsidian(source: dict, subject: str, strategy: str,
                 parsed: dict, framework: dict) -> str:
     now = datetime.now()
     now_iso_date = now.strftime("%Y-%m-%d")
@@ -498,7 +498,7 @@ def main():
             slug = f"{args.subject}_kes{(args.kes or '').replace('.', '-')}_{strategy_name}_{ts}_{generated_count}"
             md_path = out_dir / f"{slug}.md"
             md_content = to_obsidian(
-                source_task, source_task, args.subject,
+                source_task, args.subject,
                 strategy_name, parsed, framework
             )
             md_path.write_text(md_content, encoding="utf-8")
