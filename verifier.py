@@ -19,7 +19,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from llm import make_client, complete, get_verifier_model
+from llm import make_client, complete, complete_tracked, get_verifier_model
 from db import connect
 
 load_dotenv()
@@ -84,7 +84,7 @@ def normalize(ans: str) -> str:
 
 
 # === START_ASK_VERIFIER_LLM ===
-def verify(task_text: str, client, model: str) -> tuple[str, str]:
+def verify(task_text: str, client, model: str) -> tuple[str, str, float | None, int]:
     prompt = f"""Реши задачу ЕГЭ. Сначала кратко реши, затем на отдельной строке дай финальный ответ.
 
 Задача:
@@ -94,9 +94,10 @@ def verify(task_text: str, client, model: str) -> tuple[str, str]:
 <краткое решение>
 ОТВЕТ: <ответ>"""
 
-    text = complete(client, model, prompt, max_tokens=8192, temperature=0.1)
-    m = re.search(r"ОТВЕТ:\s*(.+?)(?=\n|$)", text)
-    return (m.group(1).strip() if m else ""), text
+    result = complete_tracked(client, model, prompt, max_tokens=8192, temperature=0.1)
+    m = re.search(r"ОТВЕТ:\s*(.+?)(?=\n|$)", result["text"])
+    answer = m.group(1).strip() if m else ""
+    return answer, result["text"], result["cost_usd"], result["latency_ms"]
 # === END_ASK_VERIFIER_LLM ===
 
 
@@ -109,7 +110,7 @@ def verify_file(md: Path, client, model: str, flag_only: bool = False) -> bool:
         return True
 
     try:
-        verified, raw = verify(parsed["task"], client, model)
+        verified, raw, cost_usd, latency_ms = verify(parsed["task"], client, model)
     except Exception as e:
         print(f"  ERR  {md.name}: {e}")
         return True
@@ -117,11 +118,15 @@ def verify_file(md: Path, client, model: str, flag_only: bool = False) -> bool:
     match = normalize(verified) == normalize(parsed["answer"])
 
     c = connect()
-    c.execute("""INSERT OR REPLACE INTO verifications
-                 (md_path, ts, model, claimed_answer, verified_answer, match, verifier_output)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)""",
-              (str(md.resolve()), datetime.now().isoformat(timespec="seconds"),
-               model, parsed["answer"], verified, int(match), raw))
+    c.execute(
+        """INSERT OR REPLACE INTO verifications
+           (md_path, ts, model, claimed_answer, verified_answer, match,
+            verifier_output, cost_usd, latency_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (str(md.resolve()), datetime.now().isoformat(timespec="seconds"),
+         model, parsed["answer"], verified, int(match), raw,
+         cost_usd, latency_ms),
+    )
     c.commit()
     c.close()
 

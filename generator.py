@@ -23,7 +23,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI, APIError
 
-from llm import make_client, complete, get_primary_model
+from llm import make_client, complete, complete_tracked, get_primary_model
 from db import connect as db_connect
 
 # === START_LOAD_DOTENV_GENERATOR ===
@@ -64,14 +64,20 @@ def already_generated(subject: str, source_id: str) -> bool:
 
 # === START_LOG_GENERATION_TO_DB ===
 def log_generation(md_path: Path, subject: str, kes: str, source_id: str,
-                   strategy: str, difficulty: int, model: str):
+                   strategy: str, difficulty: int, model: str,
+                   cost_usd: float | None = None,
+                   latency_ms: int | None = None):
     from datetime import datetime as _dt
     c = db_connect()
-    c.execute("""INSERT OR REPLACE INTO generations
-                 (md_path, ts, subject, kes, source_id, strategy, difficulty, model)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-              (str(md_path.resolve()), _dt.now().isoformat(timespec="seconds"),
-               subject, kes, source_id, strategy, difficulty, model))
+    c.execute(
+        """INSERT OR REPLACE INTO generations
+           (md_path, ts, subject, kes, source_id, strategy, difficulty, model,
+            cost_usd, latency_ms)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (str(md_path.resolve()), _dt.now().isoformat(timespec="seconds"),
+         subject, kes, source_id, strategy, difficulty, model,
+         cost_usd, latency_ms),
+    )
     c.commit()
     c.close()
 # === END_LOG_GENERATION_TO_DB ===
@@ -365,8 +371,11 @@ def generate_task(client: OpenAI, task: dict, strategy_name: str,
                   strategy_desc: str, difficulty_target: int,
                   framework: dict) -> dict:
     prompt = build_prompt(task, strategy_name, strategy_desc, difficulty_target, framework)
-    text = complete(client, get_model(), prompt, max_tokens=16384)
-    return parse_response(text)
+    result = complete_tracked(client, get_model(), prompt, max_tokens=16384)
+    parsed = parse_response(result["text"])
+    parsed["cost_usd"] = result["cost_usd"]
+    parsed["latency_ms"] = result["latency_ms"]
+    return parsed
 # === END_GENERATE_TASK_E2E ===
 
 # === START_RUN_GENERATOR_CLI ===
@@ -505,7 +514,8 @@ def main():
             log_generation(md_path, args.subject,
                            source_task.get("kes", "").split(" ")[0],
                            source_task["id"], strategy_name,
-                           parsed.get("difficulty", args.difficulty), get_model())
+                           parsed.get("difficulty", args.difficulty), get_model(),
+                           parsed.get("cost_usd"), parsed.get("latency_ms"))
             print(f"  Saved: {md_path}")
         else:
             print("\n" + "="*60)

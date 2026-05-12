@@ -188,7 +188,6 @@ JSON** для структурирования (см. OpenAI GPT-4.1 Prompting G
 
 ## Контакты и ссылки
 
-- **Канал-методология:** «AI Projects» (методики GRACE, PCAM, FLEX).
 - **Связанные академические работы:**
   - GRACE-якоря ↔ Native Sparse Attention: arXiv:2502.11089
   - Thinking tokens ↔ MI peaks: arXiv:2506.02867

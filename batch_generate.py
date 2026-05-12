@@ -21,7 +21,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from llm import complete
+from llm import complete, complete_tracked
 from generator import (
     build_prompt, parse_response, to_obsidian,
     get_subject_key, get_client, get_model,
@@ -146,8 +146,8 @@ def main():
 
             prompt = build_prompt(source, strategy, strategy_desc, difficulty, framework)
             try:
-                text = complete(client, get_model(), prompt, max_tokens=16384)
-                parsed = parse_response(text)
+                result = complete_tracked(client, get_model(), prompt, max_tokens=16384)
+                parsed = parse_response(result["text"])
             except Exception as e:
                 print(f"    API error: {e}")
                 errors += 1
@@ -159,7 +159,8 @@ def main():
             md_content = to_obsidian(source, subject, strategy, parsed, framework)
             md_path.write_text(md_content, encoding="utf-8")
             log_generation(md_path, subject, kes, source["id"], strategy,
-                           parsed.get("difficulty", difficulty), get_model())
+                           parsed.get("difficulty", difficulty), get_model(),
+                           result.get("cost_usd"), result.get("latency_ms"))
             print(f"    → {md_path.name} | answer: {parsed['answer'][:50]}")
             done += 1
 

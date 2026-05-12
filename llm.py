@@ -20,22 +20,25 @@ def make_client(api_key: Optional[str] = None) -> OpenAI:
     return OpenAI(api_key=key, base_url="https://openrouter.ai/api/v1")
 # === END_MAKE_OPENROUTER_CLIENT ===
 
-
 # === START_CALL_LLM_WITH_RETRY ===
-def complete(client: OpenAI, model: str, prompt: str,
-             max_tokens: int = 16384, temperature: float = 0.3,
-             max_retries: int = 4, base_delay: float = 2.0) -> str:
-    """Call model with exponential backoff + jitter on retryable errors."""
+def complete_tracked(client: OpenAI, model: str, prompt: str,
+                     max_tokens: int = 16384, temperature: float = 0.3,
+                     max_retries: int = 4, base_delay: float = 2.0) -> dict:
+    """Returns {"text": str, "cost_usd": float|None, "latency_ms": int}."""
     last_err = None
     for attempt in range(max_retries + 1):
         try:
+            t0 = time.time()
             response = client.chat.completions.create(
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return response.choices[0].message.content or ""
+            latency_ms = int((time.time() - t0) * 1000)
+            text = response.choices[0].message.content or ""
+            cost_usd = getattr(response.usage, "cost", None)
+            return {"text": text, "cost_usd": cost_usd, "latency_ms": latency_ms}
         except (RateLimitError, APITimeoutError, APIConnectionError) as e:
             last_err = e
             if attempt == max_retries:
@@ -53,6 +56,14 @@ def complete(client: OpenAI, model: str, prompt: str,
                 continue
             raise
     raise RuntimeError(f"LLM failed after {max_retries} retries: {last_err}")
+
+
+def complete(client: OpenAI, model: str, prompt: str,
+             max_tokens: int = 16384, temperature: float = 0.3,
+             max_retries: int = 4, base_delay: float = 2.0) -> str:
+    return complete_tracked(
+        client, model, prompt, max_tokens, temperature, max_retries, base_delay
+    )["text"]
 # === END_CALL_LLM_WITH_RETRY ===
 
 

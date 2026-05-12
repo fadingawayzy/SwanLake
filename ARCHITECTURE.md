@@ -96,6 +96,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="DEFINE_DB_SCHEMA">DB_PATH=Path("ege.db") + SQL-схема трёх таблиц с индексами</block>
       <block id="CONNECT_DB">sqlite3.Connection + executescript(SCHEMA). Точка входа всех модулей</block>
       <block id="MIGRATE_LEGACY_DBS">Одноразовая копия из tracker.db и verifier.db в ege.db</block>
+      <block id="MIGRATE_COLUMNS_V030">ALTER TABLE ADD COLUMN cost_usd/latency_ms для generations и verifications (идемпотентно, catch OperationalError)</block>
       <block id="RUN_DB_MIGRATION_CLI">__main__ — вызов migrate_legacy с печатью счётчиков</block>
     </blocks>
     <calls_into>—</calls_into>
@@ -109,12 +110,14 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <pre>prompt — non-empty user message</pre>
       <post>complete возвращает str (содержимое response.choices[0].message.content) или бросает RuntimeError после max_retries</post>
       <post>Retry на RateLimitError, APITimeoutError, APIConnectionError, APIError(status>=500); прочие APIError пробрасываются сразу</post>
+	  <post>complete_tracked возвращает dict{"text": str, "cost_usd": float|None, "latency_ms": int}</post>
+	  <post>cost_usd = None если OpenRouter не вернул usage.cost (не ошибка)</post>
       <invariant>get_verifier_model должна возвращать модель, отличную от get_primary_model — иначе кросс-проверка теряет независимость</invariant>
       <invariant>Backoff экспоненциальный с jitter: base_delay × (2**i) + uniform(0, base_delay)</invariant>
     </contract>
     <blocks>
       <block id="MAKE_OPENROUTER_CLIENT">openai.OpenAI с base_url=https://openrouter.ai/api/v1</block>
-      <block id="CALL_LLM_WITH_RETRY">chat.completions.create + экспоненциальный backoff с jitter, max_retries=4</block>
+      <block id="CALL_LLM_WITH_RETRY">complete_tracked() → dict{"text","cost_usd","latency_ms"} + complete() → str (backward-compat wrapper); exponential backoff с jitter, max_retries=4</block>
       <block id="GET_PRIMARY_MODEL">env OPENROUTER_MODEL || "qwen/qwen3-235b-a22b"</block>
       <block id="GET_VERIFIER_MODEL">env OPENROUTER_VERIFIER_MODEL || "google/gemini-2.5-flash"</block>
     </blocks>
@@ -190,7 +193,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="GET_OPENROUTER_CLIENT_GUARDED">Фасад над llm.make_client + sys.exit при отсутствии ключа</block>
       <block id="GET_GENERATOR_MODEL">Фасад над llm.get_primary_model</block>
       <block id="CHECK_ALREADY_GENERATED">SELECT FROM generations WHERE subject=? AND source_id=?</block>
-      <block id="LOG_GENERATION_TO_DB">INSERT OR REPLACE в generations с md_path как PK (resolved abs path)</block>
+      <block id="LOG_GENERATION_TO_DB">INSERT OR REPLACE в generations с md_path как PK; принимает cost_usd: float|None, latency_ms: int|None</block>
       <block id="LOAD_SUBJECT_TASKS">Чтение data/{subject}.json с graceful sys.exit</block>
       <block id="LOAD_FRAMEWORK">Чтение modification_framework.json (без кеша)</block>
       <block id="MAP_SUBJECT_KEY">Identity-mapping (точка расширения для алиасов)</block>
@@ -203,7 +206,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="TOP_KES_PREFIX_GENERATOR">Каноническая форма "X.Y" (первые два сегмента dot-кода)</block>
       <block id="DEFINE_SUBJECT_RU_MAP_GEN">SUBJECT_RU = {math_profile: "Математика (профиль)", ...}</block>
       <block id="RENDER_OBSIDIAN_NOTE">Полный markdown с YAML, callouts (abstract/question/note/success/tip), Dataview-блок «похожие задачи»</block>
-      <block id="GENERATE_TASK_E2E">Композиция build_prompt + complete + parse_response</block>
+      <block id="GENERATE_TASK_E2E">Композиция build_prompt + complete_tracked + parse_response; возвращает dict с cost_usd, latency_ms</block>
       <block id="RUN_GENERATOR_CLI">argparse + --kes/--task-id/--random/--list-strategies; цикл с защитой от повторов</block>
     </blocks>
     <calls_into>llm.py, db.py</calls_into>
@@ -250,7 +253,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="STRIP_CALLOUT_PREFIX_VERIFY">Удаление "> " / ">" префиксов из callout-блоков</block>
       <block id="PARSE_GENERATED_MD_VERIFY">Парсинг task + answer + frontmatter; fallback цепочка callout → секция</block>
       <block id="NORMALIZE_VERIFY_ANSWER">Нормализация для сравнения (полная: \frac, \left, ; → ,)</block>
-      <block id="ASK_VERIFIER_LLM">Промпт верификатора с фиксированным форматом "ОТВЕТ: X" + temperature=0.1</block>
+      <block id="ASK_VERIFIER_LLM">Промпт верификатора "ОТВЕТ: X" + temperature=0.1; возвращает tuple[str, str, float|None, int]</block>
       <block id="VERIFY_SINGLE_FILE">parse_md → verify → normalize → INSERT OR REPLACE в verifications</block>
       <block id="RUN_VERIFIER_CLI">argparse path | --dir | --skip-verified | --flag-only | --model</block>
     </blocks>
@@ -578,8 +581,8 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
 
   <store path="ege.db" format="SQLite" tables="attempts, verifications, generations">
     attempts(id PK, ts, subject, kes, kes_prefix, task_number, source_id, technique, difficulty, md_path, result, note);
-    verifications(md_path PK, ts, model, claimed_answer, verified_answer, match, verifier_output);
-    generations(md_path PK, ts, subject, kes, source_id, strategy, difficulty, model)
+    verifications(md_path PK, ts, model, claimed_answer, verified_answer, match, verifier_output, cost_usd, latency_ms);
+    generations(md_path PK, ts, subject, kes, source_id, strategy, difficulty, model, cost_usd, latency_ms)
   </store>
 
   <store path="vault/**/*.md" format="Markdown + YAML frontmatter" written_by="generator.py (через batch_generate.py / mock_exam.py / seed_demo.py)" read_by="verifier.py, review.py, srs.py (через attempts), dashboard.py, moc.py (генерирует MOC, не читает task notes)">
@@ -643,7 +646,10 @@ absolute path. Перенос `vault/` сломает все ссылки `attem
 - INV-025: `batch_generate.PLAN` записи — кортежи строго на 5 элементов (subject, kes, strategy, difficulty, count). Изменение формата → молчаливый tuple-unpacking error.
 - INV-026: Идемпотентность генерации: `--random` / batch flow проверяет `already_generated(subject, source_id)` и пропускает повторы. Путь `--task-id` НЕ фильтрует.
 - INV-027: SKIP-кейс в `verify_file` (task или answer не извлеклись) возвращает `True` — не считается mismatch и может скрыть невалидные .md.
-
+- INV-028: cost_usd ≥ 0 если не NULL (нулевая стоимость возможна у бесплатных моделей).
+- INV-029: latency_ms > 0 если не NULL (измеряется только успешный вызов, не retries).
+- INV-030: Строки в generations и verifications, созданные до v0.3.0, имеют cost_usd = NULL и latency_ms = NULL — это норма, не ошибка.
+- INV-031: complete() возвращает str (backward compat); complete_tracked() возвращает dict{"text", "cost_usd", "latency_ms"}. Все новые callers используют complete_tracked().
 ## 7. Соглашения проекта
 
 - 7.1. **Семантическая разметка GRACE**: каждый функциональный блок в `.py`-файле обрамляется парными комментариями `# === START_<BLOCK_ID> ===` и `# === END_<BLOCK_ID> ===`, где `BLOCK_ID` — UPPER_SNAKE_CASE из таблицы блоков выше (см. § 3). Имена уникальны во всём проекте.

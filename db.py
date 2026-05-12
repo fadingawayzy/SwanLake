@@ -35,7 +35,9 @@ CREATE TABLE IF NOT EXISTS verifications (
     claimed_answer TEXT,
     verified_answer TEXT,
     match INTEGER NOT NULL,
-    verifier_output TEXT
+    verifier_output TEXT,
+    cost_usd REAL DEFAULT NULL,
+    latency_ms INTEGER DEFAULT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ver_match ON verifications(match);
 
@@ -47,17 +49,33 @@ CREATE TABLE IF NOT EXISTS generations (
     source_id TEXT NOT NULL,
     strategy TEXT,
     difficulty INTEGER,
-    model TEXT
+    model TEXT,
+    cost_usd REAL DEFAULT NULL,
+    latency_ms INTEGER DEFAULT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_gen_source ON generations(subject, source_id);
 CREATE INDEX IF NOT EXISTS idx_gen_kes ON generations(subject, kes);
 """
 # === END_DEFINE_DB_SCHEMA ===
 
+# === START_MIGRATE_COLUMNS_V030 ===
+def _ensure_cost_latency_columns(conn: sqlite3.Connection) -> None:
+    for table in ("generations", "verifications"):
+        for col, typedef in (("cost_usd", "REAL"), ("latency_ms", "INTEGER")):
+            try:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {col} {typedef} DEFAULT NULL"
+                )
+            except sqlite3.OperationalError:
+                pass # column already exists
+    conn.commit()
+# === END_MIGRATE_COLUMNS_V030 ===
+
 # === START_CONNECT_DB ===
 def connect() -> sqlite3.Connection:
     c = sqlite3.connect(DB_PATH)
     c.executescript(SCHEMA)
+    _ensure_cost_latency_columns(c)
     return c
 # === END_CONNECT_DB ===
 
