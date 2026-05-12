@@ -207,23 +207,25 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="DEFINE_SUBJECT_RU_MAP_GEN">SUBJECT_RU = {math_profile: "Математика (профиль)", ...}</block>
       <block id="RENDER_OBSIDIAN_NOTE">Полный markdown с YAML, callouts (abstract/question/note/success/tip), Dataview-блок «похожие задачи»</block>
       <block id="GENERATE_TASK_E2E">Композиция build_prompt + complete_tracked + parse_response; возвращает dict с cost_usd, latency_ms</block>
-      <block id="RUN_GENERATOR_CLI">argparse + --kes/--task-id/--random/--list-strategies; цикл с защитой от повторов</block>
+      <block id="RUN_GENERATOR_CLI">argparse: --out/--out-dir (default=vault), --console, --kes/--task-id/--random/--list-strategies; сохранение в vault/{subject}/{kes-dashed}/; цикл с защитой от повторов и flush-прогрессом</block>
     </blocks>
     <calls_into>llm.py, db.py</calls_into>
     <called_by>batch_generate.py, mock_exam.py, seed_demo.py, dashboard.py (через subprocess)</called_by>
   </module>
 
   <module path="batch_generate.py" role="BATCH_RUNNER">
-    <one_line>Батчевый раннер PLAN: разворачивает (subject, kes, strategy, difficulty, count) в LLM-генерации с записью в vault и DB.</one_line>
+    <one_line>Параллельный батчевый раннер: ThreadPoolExecutor → разворачивает PLAN в LLM-генерации с последовательным vault+DB-записью.</one_line>
     <contract>
       <pre>data/{subject}.json и modification_framework.json существуют</pre>
       <pre>--plan указывает на .py-файл с переменной PLAN: list[tuple(5)] (или используется DEFAULT_PLAN)</pre>
       <pre>OPENROUTER_API_KEY установлен в env</pre>
+      <post>LLM-вызовы параллельные (--workers, default=5); vault-запись и DB-INSERT — последовательные (thread-safe)</post>
       <post>Для каждой PLAN-записи создано count .md в vault/{subject}/{kes-dashed}/ + строка в generations</post>
       <post>already_generated отсекает повторы того же source_id (skip-counter печатается)</post>
       <invariant>--max ограничивает первые N записей PLAN, не общее число задач</invariant>
       <invariant>PLAN кортежи — строго 5 элементов; tuple unpacking упадёт молча при изменении формата</invariant>
       <invariant>importlib.util загружает произвольный Python — plan.py не доверенный по умолчанию</invariant>
+      <invariant>already_generated проверяется до сборки jobs (pre-flight); параллельные generation не влияют на already_generated друг друга</invariant>
     </contract>
     <blocks>
       <block id="LOAD_PLAN_FROM_FILE">importlib.util.spec_from_file_location + exec_module — выполняет произвольный .py</block>
@@ -231,7 +233,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="LOAD_BATCH_TASKS">Локальная копия load_tasks (дублирует generator.LOAD_SUBJECT_TASKS)</block>
       <block id="LOAD_BATCH_FRAMEWORK">Локальная копия load_framework (дублирует generator.LOAD_FRAMEWORK)</block>
       <block id="LOOKUP_STRATEGY_DESC">Поиск desc стратегии: kes_modifications → global_modifications → strategy_name</block>
-      <block id="RUN_BATCH_GENERATE">Цикл по PLAN: build_prompt + complete + parse + to_obsidian + log_generation</block>
+      <block id="RUN_BATCH_GENERATE">Сборка плоского списка job из PLAN (фильтр already_generated) → ThreadPoolExecutor (--workers=5) → параллельный LLM → последовательный vault/DB-write; итог: done/errors/cost/elapsed</block>
     </blocks>
     <calls_into>llm.py, generator.py</calls_into>
     <called_by>coverage.py (импорт DEFAULT_PLAN на module-level)</called_by>
@@ -255,7 +257,7 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="NORMALIZE_VERIFY_ANSWER">Нормализация для сравнения (полная: \frac, \left, ; → ,)</block>
       <block id="ASK_VERIFIER_LLM">Промпт верификатора "ОТВЕТ: X" + temperature=0.1; возвращает tuple[str, str, float|None, int]</block>
       <block id="VERIFY_SINGLE_FILE">parse_md → verify → normalize → INSERT OR REPLACE в verifications</block>
-      <block id="RUN_VERIFIER_CLI">argparse path | --dir | --skip-verified | --flag-only | --model</block>
+      <block id="RUN_VERIFIER_CLI">argparse path | --dir (пропускает _moc/ и _templates/) | --skip-verified | --flag-only | --model</block>
     </blocks>
     <calls_into>llm.py, db.py</calls_into>
     <called_by>— (CLI entrypoint)</called_by>

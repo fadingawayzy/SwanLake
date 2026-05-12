@@ -15,6 +15,8 @@ import argparse
 import importlib.util
 import json
 import random
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -104,22 +106,20 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--plan", type=str, help="Path to external PLAN file (Python module with PLAN=...)")
     p.add_argument("--max", type=int, default=None, help="Cap total tasks generated")
+    p.add_argument("--workers", type=int, default=5, help="Parallel LLM workers (default: 5)")
     args = p.parse_args()
 
     plan = load_plan_from_file(Path(args.plan)) if args.plan else PLAN
     if args.max:
         plan = plan[:args.max]
 
-    client = get_client()
     framework = load_framework()
+    client = get_client()
+    model = get_model()
     today = datetime.now().strftime("%Y-%m-%d")
 
-    total = sum(c for *_, c in plan)
-    print(f"Batch generate: {total} tasks for {today} | model: {get_model()}")
-
-    done = 0
-    errors = 0
-
+    jobs = []
+    skipped = 0
     for subject, kes, strategy, difficulty, count in plan:
         tasks = load_tasks(subject)
         pool = [t for t in tasks
@@ -128,43 +128,84 @@ def main():
             pool = [t for t in tasks if t.get("kes", "").startswith(kes)]
         if not pool:
             print(f"  SKIP {subject} КЭС={kes}: no tasks")
+            skipped += count
+            continue
+
+        available = [t for t in pool if not already_generated(subject, t["id"])]
+        if not available:
+            print(f"  SKIP {subject} КЭС={kes}: all sources already generated")
+            skipped += count
             continue
 
         out_dir = VAULT_ROOT / subject / kes.replace(".", "-")
         out_dir.mkdir(parents=True, exist_ok=True)
-
         strategy_desc = get_strategy_desc(framework, subject, strategy)
         subject_key = get_subject_key(subject)
 
-        for i in range(count):
-            available = [t for t in pool if not already_generated(subject, t["id"])]
-            if not available:
-                print(f"    SKIP {subject}/{kes}: all sources already generated")
-                break
-            source = random.choice(available)
-            print(f"  [{done+1}/{total}] {subject} КЭС={kes} [{strategy}] task={source['id']}")
+        take = min(count, len(available))
+        for i in range(take):
+            jobs.append({
+                "subject": subject, "kes": kes, "strategy": strategy,
+                "difficulty": difficulty, "source": available[i],
+                "out_dir": out_dir, "strategy_desc": strategy_desc,
+                "subject_key": subject_key, "index": i,
+            })
+        skipped += count - take
 
-            prompt = build_prompt(source, strategy, strategy_desc, difficulty, framework)
+    total = len(jobs)
+    if not total:
+        print("No tasks to generate. Skipped: {skipped}")
+        return
+
+    print(f"Batch generate: {total} tasks for {today} | model: {model} | workers: {args.workers}")
+    t_start = time.time()
+
+    def generate_one(job: dict) -> dict:
+        prompt = build_prompt(job["source"], job["strategy"],
+                              job["strategy_desc"], job["difficulty"], framework)
+        result = complete_tracked(client, model, prompt, max_tokens=16384)
+        parsed = parse_response(result["text"])
+        return {**job, "result": result, "parsed": parsed}
+
+    done = 0
+    errors = 0
+    total_cost = 0.0
+
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        futures = {executor.submit(generate_one, j): j for j in jobs}
+        for future in as_completed(futures):
+            job = futures[future]
             try:
-                result = complete_tracked(client, get_model(), prompt, max_tokens=16384)
-                parsed = parse_response(result["text"])
+                data = future.result()
             except Exception as e:
-                print(f"    API error: {e}")
+                print(f"  [{done+errors+1}/{total}] ERR {job['subject']} КЭС={job['kes']}: {e}")
                 errors += 1
                 continue
 
-            ts = datetime.now().strftime("%H%M%S")
-            slug = f"{today}_{kes.replace('.', '-')}_{strategy}_{ts}_{i}"
-            md_path = out_dir / f"{slug}.md"
-            md_content = to_obsidian(source, subject, strategy, parsed, framework)
-            md_path.write_text(md_content, encoding="utf-8")
-            log_generation(md_path, subject, kes, source["id"], strategy,
-                           parsed.get("difficulty", difficulty), get_model(),
-                           result.get("cost_usd"), result.get("latency_ms"))
-            print(f"    → {md_path.name} | answer: {parsed['answer'][:50]}")
-            done += 1
+            parsed = data["parsed"]
+            result = data["result"]
+            cost = result.get("cost_usd") or 0.0
+            total_cost += cost
 
-    print(f"\nComplete: {done} generated, {errors} errors.")
+            ts = datetime.now().strftime("%H%M%S")
+            slug = f"{today}_{job['kes'].replace('.', '-')}_{job['strategy']}_{ts}_{job['index']}"
+            md_path = job["out_dir"] / f"{slug}.md"
+            md_content = to_obsidian(job["source"], job["subject"], job["strategy"],
+                                     parsed, framework)
+            md_path.write_text(md_content, encoding="utf-8")
+            log_generation(md_path, job["subject"], job["kes"], job["source"]["id"],
+                           job["strategy"],
+                           parsed.get("difficulty", job["difficulty"]), model,
+                           cost, result.get("latency_ms"))
+
+            done += 1
+            print(f"  [{done+errors}/{total}] {job['subject']} КЭС={job['kes']} "
+                  f"→ {md_path.name} | answer: {parsed['answer'][:40]} "
+                  f"\\${cost:.6f}")
+
+    elapsed = time.time() - t_start
+    print(f"\nComplete: {done} generated, {errors} errors, {skipped} skipped "
+          f"| {elapsed:.0f}s | cost \\${total_cost:.6f}")
 # === END_RUN_BATCH_GENERATE ===
 
 

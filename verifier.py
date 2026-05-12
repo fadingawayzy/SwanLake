@@ -164,7 +164,10 @@ def main():
 
     if args.dir:
         files = sorted(Path(args.dir).rglob("*.md"))
-        files = [f for f in files if str(f.resolve()) not in done]
+        files = [f for f in files
+                 if str(f.resolve()) not in done
+                 and "_moc" not in f.parts
+                 and "_templates" not in f.parts]
         print(f"Verifying {len(files)} files")
         ok = 0
         for f in files:

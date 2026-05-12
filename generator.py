@@ -391,8 +391,10 @@ def main():
     parser.add_argument("--n", type=int, default=1, help="Number of tasks to generate")
     parser.add_argument("--random", action="store_true", dest="use_random",
                         help="Pick random task from filtered set")
-    parser.add_argument("--out", type=str, default=None,
-                        help="Output dir for Obsidian Markdown files")
+    parser.add_argument("--out", "--out-dir", type=str, default="vault",
+                        help="Output dir for Obsidian Markdown files (default: vault)")
+    parser.add_argument("--console", action="store_true",
+                        help="Print to console instead of saving to vault")
     parser.add_argument("--list-strategies", action="store_true",
                         help="List all available strategies for subject+KES")
     args = parser.parse_args()
@@ -462,8 +464,11 @@ def main():
             strategy_desc = "Ввести параметр a вместо ключевого числа"
 
     out_dir = None
-    if args.out:
-        out_dir = Path(args.out)
+    if not args.console:
+        out_dir = Path(args.out) / args.subject
+        kes_subdir = (args.kes or "").replace(".", "-")
+        if kes_subdir:
+            out_dir = out_dir / kes_subdir
         out_dir.mkdir(parents=True, exist_ok=True)
 
     client = get_client()
@@ -504,7 +509,8 @@ def main():
 
         if out_dir:
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            slug = f"{args.subject}_kes{(args.kes or '').replace('.', '-')}_{strategy_name}_{ts}_{generated_count}"
+            kes_part = (args.kes or "").replace(".", "-")
+            slug = f"kes{kes_part}_{strategy_name}_{ts}_{generated_count}"
             md_path = out_dir / f"{slug}.md"
             md_content = to_obsidian(
                 source_task, args.subject,
