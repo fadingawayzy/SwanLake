@@ -13,6 +13,7 @@ import argparse
 import json
 import random
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from generator import (
     build_prompt, parse_response, get_client, get_model,
     get_subject_key, load_framework
 )
-from llm import complete
+from llm import complete_tracked
 
 load_dotenv()
 
@@ -87,8 +88,11 @@ def harden(task: dict, framework: dict, subject: str, client, model: str) -> dic
             break
 
     prompt = build_prompt(task, strategy_name, strategy_desc, 3, framework)
-    text = complete(client, model, prompt, max_tokens=16384)
-    return parse_response(text)
+    result = complete_tracked(client, model, prompt, max_tokens=16384)
+    parsed = parse_response(result["text"])
+    parsed["cost_usd"] = result["cost_usd"]
+    parsed["latency_ms"] = result["latency_ms"]
+    return parsed
 # === END_HARDEN_TASK ===
 
 
@@ -173,20 +177,32 @@ def main():
     client = get_client() if args.hard else None
     model = get_model() if args.hard else None
 
+    t_start = time.time()
+    if args.hard:
+        print(f"Building HARD mock exam: {args.subject} ({expected} tasks)", flush=True)
+        print(f"  Model: {model}", flush=True)
+    else:
+        print(f"Building STANDARD mock exam: {args.subject} ({expected} tasks)", flush=True)
+
     kes_sorted = sorted(buckets.keys())
     chosen_kes = kes_sorted[:expected] if len(kes_sorted) >= expected else kes_sorted
     while len(chosen_kes) < expected and kes_sorted:
         chosen_kes.append(random.choice(kes_sorted))
 
+    ok = 0
+    errors = 0
+    total_cost = 0.0
+
     for idx, kes in enumerate(chosen_kes, 1):
         src = pick_variant(buckets[kes])
         if not src:
-            print(f"  WARN: no task for КЭС {kes}")
+            print(f"  [{idx}/{expected}] WARN: no task for КЭС {kes}", flush=True)
+            errors += 1
             continue
         src = {**src, "task_number": str(idx)}
 
         if args.hard and client:
-            print(f"  [{idx}/{expected}] hardening КЭС={kes}")
+            print(f"  [{idx}/{expected}] hardening КЭС={kes} ...", end=" ", flush=True)
             try:
                 parsed = harden(src, framework, args.subject, client, model)
                 items.append({
@@ -195,22 +211,34 @@ def main():
                     "_answer": parsed["answer"],
                     "_solution": parsed["solution"],
                 })
+                cost = parsed.get("cost_usd") or 0.0
+                lat = parsed.get("latency_ms") or 0
+                total_cost += cost
+                print(f"answer={parsed['answer'][:20]} \\${cost:.6f} {lat}ms", flush=True)
+                ok += 1
             except APIError as e:
-                print(f"    API error: {e} — falling back to bank task")
+                print(f"API error: {e[:60]}", flush=True)
                 items.append(src)
+                errors += 1
         else:
             fmt = src.get("answer_format", "").strip()
             placeholder = f"(решить самостоятельно — формат: {fmt})" if fmt else "(решить самостоятельно)"
             items.append({**src, "_answer": placeholder})
+            ok += 1
 
+    elapsed = time.time() - t_start
     out_dir = Path(args.out) / args.subject
     out_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     suffix = "_hard" if args.hard else ""
     md_path = out_dir / f"mock_{args.subject}_{ts}{suffix}.md"
     md_path.write_text(render_exam(args.subject, items, args.hard), encoding="utf-8")
+
     print(f"\nSaved: {md_path}")
     print(f"Time limit: {TIME_LIMIT_MIN[args.subject]} min | {len(items)} tasks")
+    if args.hard:
+        print(f"Results: {ok} ok, {errors} errors | elapsed {elapsed:.0f}s | total cost \\${total_cost:.6f}")
+        print(f"  Note: hardest tasks (КЭС 2.10/2.11/3.6/7.3/7.4) expect LLM reasoning — verifier check advised")
 # === END_RUN_MOCK_EXAM_CLI ===
 
 

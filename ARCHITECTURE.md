@@ -465,9 +465,9 @@ LLM, парсит ответ, рендерит Obsidian-заметку и пиш
       <block id="TOP_PREFIX_EXAM">Дублирует TOP_KES_PREFIX_GENERATOR</block>
       <block id="BUCKET_TASKS_BY_KES">by_kes — группировка tasks по top_prefix</block>
       <block id="PICK_VARIANT_PREFER_LATEX">random.choice с приоритетом latex_text != ""</block>
-      <block id="HARDEN_TASK">Первый level matching КЭС → build_prompt + complete + parse_response</block>
+      <block id="HARDEN_TASK">Первый level matching КЭС → build_prompt + complete_tracked + parse_response; возвращает cost_usd/latency_ms</block>
       <block id="RENDER_EXAM_MD">Markdown с фронтматтером (type: mock_exam, mode), ответами в кодблоке</block>
-      <block id="RUN_MOCK_EXAM_CLI">argparse --subject/--hard/--out/--seed + сборка chosen_kes из buckets</block>
+      <block id="RUN_MOCK_EXAM_CLI">argparse + сборка chosen_kes; flush=True на всех progress-принтах; тайминг + cost/error-итог</block>
     </blocks>
     <calls_into>generator.py, llm.py</calls_into>
     <called_by>— (CLI entrypoint)</called_by>
